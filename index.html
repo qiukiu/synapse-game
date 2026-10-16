@@ -60,7 +60,7 @@
             <!-- Round & Score Bar -->
             <div class="flex justify-between items-center text-xs text-slate-400 pb-2 border-b border-slate-700">
                 <span>Round <b id="round-num" class="text-indigo-400">1</b></span>
-                <span>Cumulative Sync: <b id="total-score" class="text-emerald-400">0°</b></span>
+                <span>Avg Sync Score: <b id="total-score" class="text-emerald-400">0°</b></span>
             </div>
 
             <!-- Seed & History Box -->
@@ -78,6 +78,7 @@
             <div id="input-section" class="space-y-3">
                 <p class="text-xs text-slate-300 text-center">Type the word you think your partner will associate with this!</p>
                 <input id="word-input" type="text" placeholder="Your secret word..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-center text-lg text-white focus:outline-none focus:border-indigo-500 uppercase">
+                <p id="error-msg" class="text-xs text-red-400 text-center hidden font-medium"></p>
                 <button id="submit-btn" onclick="submitWord()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-md">Lock In Answer</button>
             </div>
 
@@ -118,12 +119,33 @@
                 </div>
                 <p id="client-wait-next" class="hidden text-center text-xs text-slate-400 animate-pulse">Waiting for host to start next round...</p>
             </div>
+
+            <!-- GAME COMPLETE SCREEN -->
+            <div id="game-complete" class="hidden space-y-4 pt-2 text-center">
+                <div class="bg-gradient-to-b from-indigo-950/80 to-slate-900 p-6 rounded-xl space-y-3 border border-emerald-500/50 shadow-xl">
+                    <div class="text-4xl">🎉</div>
+                    <h2 class="text-2xl font-black text-emerald-400 uppercase tracking-wide">Perfect Mind Sync!</h2>
+                    <p class="text-sm text-slate-300">You both said <b id="matched-word" class="text-amber-300 uppercase"></b>!</p>
+                    
+                    <div class="grid grid-cols-2 gap-3 pt-3">
+                        <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700">
+                            <span class="text-xs text-slate-400 block">Rounds Needed</span>
+                            <span id="final-rounds" class="text-xl font-bold text-indigo-300">1</span>
+                        </div>
+                        <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700">
+                            <span class="text-xs text-slate-400 block">Average Score</span>
+                            <span id="final-avg-score" class="text-xl font-bold text-emerald-400">100°</span>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="location.reload()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition">Play Again</button>
+            </div>
         </div>
     </div>
 
     <script>
         // REPLACE WITH YOUR FIREBASE CONFIG
-       const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyA6qJQATdxVxAeACL3Hie3_iQijkUPZDj4",
   authDomain: "synapse-multi-2f6d4.firebaseapp.com",
   databaseURL: "https://synapse-multi-2f6d4-default-rtdb.europe-west1.firebasedatabase.app",
@@ -141,6 +163,7 @@
         let playerId = 'p_' + Math.random().toString(36).substr(2, 6);
         let playerName = '';
         let isHost = false;
+        let currentForbiddenWords = [];
 
         const starterSeeds = ["SUN", "OCEAN", "MUSIC", "NIGHT", "FIRE", "SPACE", "COFFEE", "DREAM"];
 
@@ -162,7 +185,8 @@
                 status: 'lobby',
                 round: 1,
                 seed: initialSeed,
-                totalScore: 0,
+                totalScoreSum: 0,
+                usedSeeds: [initialSeed],
                 history: "",
                 players: {
                     [playerId]: { name: playerName, host: true }
@@ -214,10 +238,16 @@
                 }
 
                 // Game Logic
-                if (room.status === 'playing') {
+                if (room.status === 'playing' || room.status === 'finished') {
                     showScreen('screen-game');
                     document.getElementById('round-num').innerText = room.round;
-                    document.getElementById('total-score').innerText = (room.totalScore || 0) + '°';
+                    
+                    // Keep track of forbidden seed words
+                    currentForbiddenWords = room.usedSeeds || [];
+
+                    // Calculate Average Score across completed rounds
+                    const avgScore = room.round > 1 ? Math.round((room.totalScoreSum || 0) / (room.round - (room.status === 'finished' ? 0 : 1))) : 0;
+                    document.getElementById('total-score').innerText = avgScore + '°';
                     document.getElementById('seed-word').innerText = room.seed;
 
                     if (room.history) {
@@ -225,6 +255,19 @@
                         document.getElementById('prev-words').innerText = room.history;
                     } else {
                         document.getElementById('history-box').classList.add('hidden');
+                    }
+
+                    // Check Game Finished State
+                    if (room.status === 'finished') {
+                        document.getElementById('input-section').classList.add('hidden');
+                        document.getElementById('waiting-submission').classList.add('hidden');
+                        document.getElementById('round-result').classList.add('hidden');
+                        document.getElementById('game-complete').classList.remove('hidden');
+
+                        document.getElementById('matched-word').innerText = room.winningWord || '';
+                        document.getElementById('final-rounds').innerText = room.round;
+                        document.getElementById('final-avg-score').innerText = Math.round(room.totalScoreSum / room.round) + '°';
+                        return;
                     }
 
                     // Reset input view if round changed or round input was cleared
@@ -246,7 +289,7 @@
                         const score = currentRoundData.score;
                         document.getElementById('temp-val').innerText = score + '°';
                         document.getElementById('temp-bar').style.width = score + '%';
-                        document.getElementById('temp-rating').innerText = score > 80 ? '🔥 Boiling Match!' : score > 50 ? '⚡ Warm Sync!' : '❄️ Freezing Connection';
+                        document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match!' : score > 50 ? '⚡ Warm Sync!' : '❄️ Freezing Connection';
 
                         if (isHost) {
                             document.getElementById('host-next-btn').classList.remove('hidden');
@@ -265,7 +308,7 @@
                         document.getElementById('input-section').classList.remove('hidden');
                         document.getElementById('waiting-submission').classList.add('hidden');
                         document.getElementById('round-result').classList.add('hidden');
-                        document.getElementById('word-input').value = '';
+                        document.getElementById('error-msg').classList.add('hidden');
                     }
 
                     // Host evaluates inputs when both submit
@@ -281,12 +324,23 @@
         };
 
         window.submitWord = function() {
+            const errEl = document.getElementById('error-msg');
+            errEl.classList.add('hidden');
+
             const word = document.getElementById('word-input').value.trim().toUpperCase();
             if (!word) return alert('Type a word!');
+
+            // Restriction check: Cannot input any of the used seed words
+            if (currentForbiddenWords.includes(word)) {
+                errEl.innerText = `"${word}" was already used as a target seed word! Choose a different word.`;
+                errEl.classList.remove('hidden');
+                return;
+            }
 
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 const room = snap.val();
                 db.ref(`rooms/${roomId}/rounds/${room.round}/inputs/${playerId}`).set(word);
+                document.getElementById('word-input').value = '';
             });
         };
 
@@ -300,6 +354,18 @@
 
             if (w1 === w2) {
                 score = 100;
+                // Exact Match: Mark game as finished!
+                const newTotalSum = (room.totalScoreSum || 0) + score;
+                db.ref(`rooms/${roomId}/rounds/${currentRound}`).update({
+                    score: score,
+                    completed: true
+                });
+                db.ref(`rooms/${roomId}`).update({
+                    totalScoreSum: newTotalSum,
+                    status: 'finished',
+                    winningWord: inputs[0]
+                });
+                return;
             } else {
                 try {
                     const res = await fetch(`https://api.datamuse.com/words?rel_syn=${w1}&max=50`);
@@ -319,7 +385,7 @@
                 }
             }
 
-            const newTotalScore = (room.totalScore || 0) + score;
+            const newTotalSum = (room.totalScoreSum || 0) + score;
 
             db.ref(`rooms/${roomId}/rounds/${currentRound}`).update({
                 score: score,
@@ -327,7 +393,7 @@
             });
 
             db.ref(`rooms/${roomId}`).update({
-                totalScore: newTotalScore
+                totalScoreSum: newTotalSum
             });
         }
 
@@ -341,9 +407,13 @@
                 const nextSeed = `${inputs[0]} + ${inputs[1]}`;
                 const newRound = currentRound + 1;
 
+                // Add both inputs to used seeds list so they cannot be reused
+                const updatedUsedSeeds = [...(room.usedSeeds || []), inputs[0].toUpperCase(), inputs[1].toUpperCase()];
+
                 db.ref('rooms/' + roomId).update({
                     round: newRound,
                     seed: nextSeed,
+                    usedSeeds: updatedUsedSeeds,
                     history: `${inputs[0]} & ${inputs[1]} (Round ${currentRound})`
                 });
             });
