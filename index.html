@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synapse - Multiplayer Word Convergence & Tournament</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.8); }
+        }
+        .animate-glow { animation: pulseGlow 3s infinite; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-brand-500 selection:text-white">
+
+    <header class="w-full border-b border-slate-800/80 glass-panel sticky top-0 z-50 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <i class="fa-solid fa-brain text-white text-lg"></i>
+            </div>
+            <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-indigo-200 to-indigo-400 bg-clip-text text-transparent">SYNAPSE 3.0</span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button onclick="openInstructionsModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-indigo-300 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center space-x-1">
+                <i class="fa-solid fa-circle-question"></i>
+                <span>How to Play</span>
+            </button>
+            <div id="roomBadge" class="hidden text-xs px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 font-medium text-indigo-300 flex items-center space-x-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="badgeRoomCode">ROOM: ----</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-lg w-full mx-auto p-4 flex flex-col justify-center items-center my-auto">
+
+        <!-- 0. ONBOARDING & SETUP WIZARD (Step-by-Step for New Users) -->
+        <div id="screenOnboarding" class="w-full space-y-6">
+            <div class="text-center space-y-2">
+                <span class="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-bold uppercase tracking-wider">Cloud Tournament Edition</span>
+                <h1 class="text-3xl font-black tracking-tight text-white">Welcome to Synapse</h1>
+                <p class="text-sm text-slate-400">Haven't started yet? Follow these simple steps to host or join a multi-player group.</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl space-y-5">
+                <!-- Step Guidance Bar -->
+                <div class="grid grid-cols-3 gap-2 text-center pb-2 border-b border-slate-800">
+                    <div class="p-2 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 text-xs font-bold">
+                        1. Profile
+                    </div>
+                    <div class="p-2 rounded-lg bg-slate-900/50 text-slate-400 text-xs font-semibold">
+                        2. Host / Join
+                    </div>
+                    <div class="p-2 rounded-lg bg-slate-900/50 text-slate-400 text-xs font-semibold">
+                        3. Tournament
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Step 1: Your Nickname</label>
+                        <input type="text" id="inputPlayerName" placeholder="e.g. Alex" maxlength="14"
+                            class="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm font-semibold">
+                    </div>
+
+                    <div class="space-y-2 pt-2">
+                        <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Step 2: Choose Your Path</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="createRoom()" class="py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white shadow-lg shadow-indigo-600/30 transition flex flex-col items-center justify-center space-y-1 text-xs">
+                                <i class="fa-solid fa-server text-base mb-0.5"></i>
+                                <span>Host New Room</span>
+                                <span class="text-[9px] text-indigo-200 font-normal">Cloud & Public</span>
+                            </button>
+                            <button onclick="showJoinModal()" class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 font-bold text-slate-200 transition flex flex-col items-center justify-center space-y-1 text-xs">
+                                <i class="fa-solid fa-right-to-bracket text-base mb-0.5"></i>
+                                <span>Join with Code</span>
+                                <span class="text-[9px] text-slate-400 font-normal">Enter room key</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative flex py-1 items-center">
+                        <div class="flex-grow border-t border-slate-800"></div>
+                        <span class="flex-shrink mx-3 text-slate-500 text-[10px] uppercase font-bold">Or Public Cloud</span>
+                        <div class="flex-grow border-t border-slate-800"></div>
+                    </div>
+
+                    <button onclick="quickMatchmaking()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-bold text-white shadow-lg shadow-indigo-600/20 transition text-xs flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-globe"></i>
+                        <span>Auto-Join Global Matchmaking Lobby</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. WAITING ROOM SCREEN (Supports 3+ Players & Host controls) -->
+        <div id="screenWaiting" class="w-full space-y-6 hidden">
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div>
+                        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block">Cloud Room Lobby</span>
+                        <h2 id="displayRoomTitle" class="text-xl font-black text-white">Room: ----</h2>
+                    </div>
+                    <button onclick="copyRoomCode()" class="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-semibold transition">
+                        <i class="fa-regular fa-copy mr-1"></i> Copy Code
+                    </button>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span>Connected Players (3+ Supported)</span>
+                        <span id="playerCountBadge" class="font-bold text-indigo-400">1 Player</span>
+                    </div>
+                    <div id="waitingPlayersList" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        <!-- Dynamic Player Badges -->
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex flex-col space-y-2">
+                    <button id="btnStartGameHost" onclick="hostStartGame()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white shadow-lg shadow-indigo-600/30 transition text-sm flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-play"></i>
+                        <span>Start Tournament (Host Control)</span>
+                    </button>
+                    <p id="waitingHostNotice" class="text-center text-[11px] text-slate-500">Waiting for host to launch the round...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. GAMEPLAY SCREEN (Multiplayer Word Convergence) -->
+        <div id="screenGame" class="w-full space-y-4 hidden">
+            <!-- Top HUD -->
+            <div class="flex items-center justify-between px-1">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-semibold uppercase text-slate-400">Round</span>
+                    <span id="gameRoundNum" class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-indigo-400 font-bold text-xs">1 / 5</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fa-regular fa-clock text-slate-400 text-xs"></i>
+                    <span id="gameTimer" class="font-mono font-bold text-sm text-indigo-300">0:45</span>
+                </div>
+            </div>
+
+            <!-- Seed Concept Card -->
+            <div class="glass-panel p-5 rounded-2xl shadow-xl space-y-4 text-center">
+                <div class="space-y-1">
+                    <span class="text-[10px] tracking-widest font-bold uppercase text-slate-500">Current Shared Seed Concept</span>
+                    <div id="seedWordDisplay" class="text-2xl font-black text-white tracking-wider uppercase bg-slate-900/60 py-2.5 rounded-xl border border-slate-800">LOADING...</div>
+                </div>
+
+                <!-- Temperature Meter Widget -->
+                <div class="space-y-2 pt-2 border-t border-slate-800/80">
+                    <div class="flex justify-between items-center text-xs font-semibold">
+                        <span class="text-slate-400">Group Convergence Heat</span>
+                        <span id="tempValueLabel" class="text-amber-400 font-bold">20° • Freezing</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800">
+                        <div id="tempBarFill" class="h-full bg-gradient-to-r from-blue-500 via-amber-500 to-red-500 rounded-full transition-all duration-700" style="width: 20%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Players Status Grid (3+ Players) -->
+            <div class="space-y-2">
+                <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Participants Status</span>
+                <div id="activePlayersGrid" class="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
+                    <!-- Dynamic participant list -->
+                </div>
+            </div>
+
+            <!-- Input Box -->
+            <div id="inputArea" class="glass-panel p-4 rounded-2xl space-y-3">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-300 flex justify-between">
+                        <span>Your Secret Word</span>
+                        <span class="text-[10px] text-slate-500">Single word matching group</span>
+                    </label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="inputWord" placeholder="Type related word..." maxlength="20"
+                            class="flex-1 px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-medium text-sm uppercase">
+                        <button onclick="submitWord()" id="btnSubmitWord" class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white shadow-lg shadow-indigo-600/30 transition text-sm">
+                            Submit
+                        </button>
+                    </div>
+                </div>
+                <div id="waitingMessage" class="hidden text-center text-xs text-indigo-300 font-medium py-1 animate-pulse">
+                    Word locked in! Waiting for other players...
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. TOURNAMENT PODIUM & RESULTS SCREEN -->
+        <div id="screenResult" class="w-full space-y-6 hidden text-center">
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl space-y-5">
+                <div class="w-16 h-16 bg-amber-500/20 border border-amber-500/40 rounded-full flex items-center justify-center mx-auto text-2xl text-amber-400 animate-bounce">
+                    🏆
+                </div>
+                <div class="space-y-1">
+                    <h2 id="resultTitle" class="text-xl font-black text-white">Round Podium Results</h2>
+                    <p id="resultSubtitle" class="text-xs text-slate-400">Comparing semantic convergence across all players.</p>
+                </div>
+
+                <!-- Podium Scoreboard (Couple / Group Matches & Empathy Leader) -->
+                <div class="space-y-2 text-left">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Tournament Leaderboard & Top Empathy</span>
+                    <div id="podiumList" class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                        <!-- Populated dynamically with scores -->
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="nextRoundOrRestart()" id="btnNextRound" class="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white shadow-lg shadow-indigo-600/30 transition text-sm">
+                        Continue to Next Round
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="w-full text-center py-3 text-[11px] text-slate-500 border-t border-slate-900">
+        Synapse Cloud Tournament Edition • Powered by Datamuse Semantic Engine
+    </footer>
+
+    <!-- JOIN ROOM MODAL -->
+    <div id="joinModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel p-6 rounded-2xl max-w-sm w-full space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">Join Room</h3>
+                <button onclick="closeJoinModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-300 block mb-1">Enter Room Code</label>
+                    <input type="text" id="inputRoomCode" placeholder="e.g. AB12CD" maxlength="6"
+                        class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 uppercase font-bold tracking-widest text-center text-lg">
+                </div>
+                <button onclick="joinRoom()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-indigo-600/30">
+                    Connect to Room
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOW TO PLAY MODAL -->
+    <div id="instructionsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel p-6 rounded-2xl max-w-md w-full space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">How to Play & Step-by-Step</h3>
+                <button onclick="closeInstructionsModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed text-left">
+                <p><b>1. Step One:</b> Enter your nickname on the welcome screen.</p>
+                <p><b>2. Step Two:</b> Host a room (cloud server) or join a friend's room code. (Supports 3+ players simultaneously).</p>
+                <p><b>3. Step Three:</b> Every round features a shared <b>Seed Concept</b> (e.g. OCEAN). Type a related secret word.</p>
+                <p><b>4. Scoring & Podium:</b> The Datamuse AI engine evaluates semantic closeness. The player who shares the highest synergy with friends wins the <b>Best Empathy Award</b> and tops the tournament podium!</p>
+            </div>
+            <button onclick="closeInstructionsModal()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl font-bold text-white text-xs">
+                Got It
+            </button>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <script>
+        // Firebase Configuration (Public Cloud Instance)
+        const firebaseConfig = {
+            databaseURL: "https://synapse-word-game-default-rtdb.firebaseio.com/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Game State Variables
+        let roomCode = null;
+        let myId = 'user_' + Math.random().toString(36).substring(2, 8);
+        let myName = '';
+        let isHost = false;
+        let roomRef = null;
+        let timerInterval = null;
+
+        const SEED_WORDS = ["OCEAN", "SPACE", "TIME", "MUSIC", "FIRE", "CASTLE", "DRAGON", "STORM", "FOREST", "SHADOW", "CYBER", "GALAXY", "MYSTERY", "VOLCANO", "AURORA"];
+
+        function showScreen(screenId) {
+            ['screenOnboarding', 'screenWaiting', 'screenGame', 'screenResult'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        window.openInstructionsModal = function() {
+            document.getElementById('instructionsModal').classList.remove('hidden');
+        };
+        window.closeInstructionsModal = function() {
+            document.getElementById('instructionsModal').classList.add('hidden');
+        };
+        window.showJoinModal = function() {
+            const nameInput = document.getElementById('inputPlayerName').value.trim();
+            if (!nameInput) {
+                showToast("Please enter your nickname first!");
+                return;
+            }
+            myName = nameInput;
+            document.getElementById('joinModal').classList.remove('hidden');
+        };
+        window.closeJoinModal = function() {
+            document.getElementById('joinModal').classList.add('hidden');
+        };
+
+        // Host Room (Cloud/Server)
+        window.createRoom = function() {
+            const nameInput = document.getElementById('inputPlayerName').value.trim();
+            if (!nameInput) {
+                showToast("Please enter your nickname first.");
+                return;
+            }
+            myName = nameInput;
+            roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            isHost = true;
+
+            roomRef = db.ref('rooms/' + roomCode);
+            roomRef.set({
+                host: myId,
+                status: 'waiting',
+                round: 1,
+                seed: SEED_WORDS[Math.floor(Math.random() * SEED_WORDS.length)],
+                players: {
+                    [myId]: { name: myName, word: '', score: 0, totalScore: 0, ready: false }
+                }
+            }).then(() => {
+                setupRoomListener();
+                document.getElementById('displayRoomTitle').innerText = 'Room: ' + roomCode;
+                document.getElementById('badgeRoomCode').innerText = 'ROOM: ' + roomCode;
+                document.getElementById('roomBadge').classList.remove('hidden');
+                document.getElementById('btnStartGameHost').classList.remove('hidden');
+                document.getElementById('waitingHostNotice').innerText = 'You are the Host! Click Start Tournament when friends join.';
+                showScreen('screenWaiting');
+            });
+        };
+
+        // Join Room by Code
+        window.joinRoom = function() {
+            const codeInput = document.getElementById('inputRoomCode').value.trim().toUpperCase();
+            if (!codeInput || codeInput.length < 4) {
+                showToast("Enter a valid room code.");
+                return;
+            }
+
+            roomCode = codeInput;
+            isHost = false;
+            closeJoinModal();
+
+            roomRef = db.ref('rooms/' + roomCode);
+            roomRef.once('value', snapshot => {
+                const data = snapshot.val();
+                if (!data) {
+                    showToast("Room not found on cloud server!");
+                    return;
+                }
+
+                roomRef.child('players/' + myId).set({
+                    name: myName,
+                    word: '',
+                    score: 0,
+                    totalScore: 0,
+                    ready: false
+                }).then(() => {
+                    setupRoomListener();
+                    document.getElementById('displayRoomTitle').innerText = 'Room: ' + roomCode;
+                    document.getElementById('badgeRoomCode').innerText = 'ROOM: ' + roomCode;
+                    document.getElementById('roomBadge').classList.remove('hidden');
+                    document.getElementById('btnStartGameHost').classList.add('hidden');
+                    document.getElementById('waitingHostNotice').innerText = 'Waiting for host to launch the tournament...';
+                    showScreen('screenWaiting');
+                });
+            });
+        };
+
+        // Quick Matchmaking (Find or create active public room)
+        window.quickMatchmaking = function() {
+            const nameInput = document.getElementById('inputPlayerName').value.trim();
+            if (!nameInput) {
+                showToast("Please enter your nickname first.");
+                return;
+            }
+            myName = nameInput;
+
+            db.ref('rooms').orderByChild('status').equalTo('waiting').limitToFirst(1).once('value', snapshot => {
+                const rooms = snapshot.val();
+                if (rooms) {
+                    const code = Object.keys(rooms)[0];
+                    roomCode = code;
+                    isHost = false;
+                    roomRef = db.ref('rooms/' + roomCode);
+                    roomRef.child('players/' + myId).set({
+                        name: myName,
+                        word: '',
+                        score: 0,
+                        totalScore: 0,
+                        ready: false
+                    }).then(() => {
+                        setupRoomListener();
+                        document.getElementById('displayRoomTitle').innerText = 'Room: ' + roomCode;
+                        document.getElementById('badgeRoomCode').innerText = 'ROOM: ' + roomCode;
+                        document.getElementById('roomBadge').classList.remove('hidden');
+                        document.getElementById('btnStartGameHost').classList.add('hidden');
+                        document.getElementById('waitingHostNotice').innerText = 'Connected via Matchmaking! Waiting for host...';
+                        showScreen('screenWaiting');
+                    });
+                } else {
+                    createRoom();
+                }
+            });
+        };
+
+        window.copyRoomCode = function() {
+            const textarea = document.createElement('textarea');
+            textarea.value = roomCode;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast("Room code copied to clipboard!");
+        };
+
+        window.hostStartGame = function() {
+            if (!isHost) return;
+            roomRef.update({
+                status: 'playing',
+                roundStartTime: Date.now()
+            });
+        };
+
+        function setupRoomListener() {
+            roomRef.on('value', snapshot => {
+                const room = snapshot.val();
+                if (!room) return;
+
+                const players = room.players || {};
+                const playerIds = Object.keys(players);
+
+                // Update waiting room participants list
+                if (room.status === 'waiting') {
+                    document.getElementById('playerCountBadge.innerText', `${playerIds.length} Player${playerIds.length > 1 ? 's' : ''}`);
+                    const listEl = document.getElementById('waitingPlayersList');
+                    listEl.innerHTML = playerIds.map(pid => {
+                        const p = players[pid];
+                        const isMe = pid === myId;
+                        const isThisHost = pid === room.host;
+                        return `
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+                                <span class="font-bold text-white flex items-center space-x-2">
+                                    <span>${p.name}</span>
+                                    ${isMe ? '<span class="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-normal">You</span>' : ''}
+                                </span>
+                                ${isThisHost ? '<span class="text-[10px] text-amber-400 font-bold bg-amber-950/40 px-2 py-0.5 rounded border border-amber-900/50">Host</span>' : '<span class="text-slate-400">Ready</span>'}
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                if (room.status === 'playing') {
+                    showScreen('screenGame');
+                    updateGameUI(room, players, playerIds);
+                } else if (room.status === 'result') {
+                    showScreen('screenResult');
+                    updateResultUI(room, players, playerIds);
+                }
+            });
+        }
+
+        function updateGameUI(room, players, playerIds) {
+            document.getElementById('gameRoundNum').innerText = `${room.round} / 5`;
+            document.getElementById('seedWordDisplay').innerText = room.seed;
+
+            const gridEl = document.getElementById('activePlayersGrid');
+            gridEl.innerHTML = playerIds.map(pid => {
+                const p = players[pid];
+                const locked = p && p.word;
+                return `
+                    <div class="glass-panel p-2.5 rounded-xl text-center border-slate-800 space-y-1">
+                        <span class="text-xs font-semibold text-slate-300 truncate block">${p.name}</span>
+                        <span class="text-[10px] font-bold py-0.5 px-2 rounded-md block ${locked ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/40' : 'bg-amber-950/30 text-amber-400 border border-amber-900/40'}">
+                            ${locked ? '🔒 Locked' : 'Thinking...'}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+
+            // Check if all players locked words and host triggers evaluation
+            if (isHost && room.status === 'playing') {
+                const allLocked = playerIds.every(pid => players[pid] && players[pid].word);
+                if (allLocked && playerIds.length >= 1) {
+                    evaluateTournamentRound(room, players, playerIds);
+                }
+            }
+
+            if (room.roundStartTime && !timerInterval) {
+                startTimer(room.roundStartTime, room, players, playerIds);
+            }
+        }
+
+        function startTimer(startTime, room, players, playerIds) {
+            if (timerInterval) clearInterval(timerInterval);
+            const duration = 45;
+
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const remaining = duration - elapsed;
+
+                if (remaining <= 0) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    document.getElementById('gameTimer').innerText = '0:00';
+                    if (isHost) {
+                        evaluateTournamentRound(room, players, playerIds);
+                    }
+                } else {
+                    const mins = Math.floor(remaining / 60);
+                    const secs = remaining % 60;
+                    document.getElementById('gameTimer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                }
+            }, 1000);
+        }
+
+        window.submitWord = function() {
+            const inputEl = document.getElementById('inputWord');
+            const word = inputEl.value.trim().toUpperCase();
+            if (!word) {
+                showToast("Please enter a valid word.");
+                return;
+            }
+
+            roomRef.child('players/' + myId).update({ word: word, ready: true }).then(() => {
+                inputEl.disabled = true;
+                document.getElementById('btnSubmitWord').disabled = true;
+                document.getElementById('btnSubmitWord').classList.add('opacity-50');
+                document.getElementById('waitingMessage').classList.remove('hidden');
+            });
+        };
+
+        // Evaluate tournament round for 3+ players using semantic convergence against seed & peers
+        async function evaluateTournamentRound(room, players, playerIds) {
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            roomRef.update({ status: 'evaluating' });
+
+            const seed = room.seed;
+            let playerScores = {};
+            let totalGroupScore = 0;
+            let evaluationsLog = {};
+
+            // Fetch semantic relation scores from Datamuse for each player's word vs Seed
+            for (let pid of playerIds) {
+                const pWord = (players[pid].word || 'TIMEOUT').trim().toUpperCase();
+                evaluationsLog[pid] = pWord;
+                let score = 10;
+
+                if (pWord === seed) {
+                    score = 100;
+                } else if (pWord !== 'TIMEOUT') {
+                    try {
+                        const res = await fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(seed)}&max=50`);
+                        const data = await res.json();
+                        const match = data.find(item => item.word.toUpperCase() === pWord);
+                        if (match) {
+                            score = Math.round(40 + Math.min(60, (match.score / 2000) * 60));
+                        } else {
+                            score = 20; // fallback relatedness
+                        }
+                    } catch (e) {
+                        score = 30;
+                    }
+                }
+                playerScores[pid] = score;
+                totalGroupScore += score;
+            }
+
+            const avgGroupTemp = Math.round(totalGroupScore / playerIds.length);
+
+            // Update player total scores in database
+            let updates = {
+                status: 'result',
+                temperature: avgGroupTemp,
+                roundEvaluations: evaluationsLog
+            };
+
+            playerIds.forEach(pid => {
+                const currentTotal = players[pid].totalScore || 0;
+                updates[`players/${pid}/score`] = playerScores[pid];
+                updates[`players/${pid}/totalScore`] = currentTotal + playerScores[pid];
+            });
+
+            roomRef.update(updates);
+        }
+
+        function updateResultUI(room, players, playerIds) {
+            const temp = room.temperature || 20;
+            document.getElementById('tempValueLabel').innerText = `${temp}° • Group Synergy Heat`;
+            document.getElementById('tempBarFill').style.width = `${temp}%`;
+
+            // Sort players by total score or round score for podium
+            const sortedPlayers = playerIds.map(pid => ({
+                id: pid,
+                name: players[pid].name,
+                word: room.roundEvaluations && room.roundEvaluations[pid] ? room.roundEvaluations[pid] : '---',
+                score: players[pid].score || 0,
+                totalScore: players[pid].totalScore || 0
+            })).sort((a, b) => b.totalScore - a.totalScore);
+
+            const topEmpathyPlayer = sortedPlayers[0];
+
+            document.getElementById('resultSubtitle').innerHTML = `Top Empathy Award goes to <b class="text-indigo-400">${topEmpathyPlayer.name}</b> for understanding friends best!`;
+
+            const podiumEl = document.getElementById('podiumList');
+            podiumEl.innerHTML = sortedPlayers.map((p, idx) => {
+                const isFirst = idx === 0;
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900 border ${isFirst ? 'border-amber-500/50 bg-amber-950/10' : 'border-slate-800'} text-xs">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-6 h-6 rounded-full ${isFirst ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-300'} flex items-center justify-center text-xs">
+                                #${idx + 1}
+                            </span>
+                            <div>
+                                <span class="font-bold text-white block">${p.name} ${isFirst ? '👑' : ''}</span>
+                                <span class="text-[10px] text-slate-400">Word: <b class="text-indigo-300">${p.word}</b></span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-black text-amber-400 text-sm">${p.totalScore} pts</span>
+                            <span class="text-[9px] text-slate-500 block">+${p.score} this round</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.nextRoundOrRestart = function() {
+            if (!isHost) {
+                showToast("Waiting for room host to start next round...");
+                return;
+            }
+
+            roomRef.once('value', snapshot => {
+                const room = snapshot.val();
+                const nextRound = (room.round || 1) + 1;
+                const playerIds = Object.keys(room.players || {});
+
+                if (nextRound > 5) {
+                    roomRef.update({
+                        round: 1,
+                        status: 'playing',
+                        seed: SEED_WORDS[Math.floor(Math.random() * SEED_WORDS.length)],
+                        roundStartTime: Date.now(),
+                        temperature: null,
+                        roundEvaluations: null
+                    });
+                } else {
+                    const newSeed = SEED_WORDS[Math.floor(Math.random() * SEED_WORDS.length)];
+                    let updates = {
+                        round: nextRound,
+                        status: 'playing',
+                        seed: newSeed,
+                        roundStartTime: Date.now(),
+                        temperature: null,
+                        roundEvaluations: null
+                    };
+
+                    playerIds.forEach(pid => {
+                        updates[`players/${pid}/word`] = '';
+                        updates[`players/${pid}/ready`] = false;
+                        updates[`players/${pid}/score`] = 0;
+                    });
+
+                    roomRef.update(updates);
+                }
+
+                const inputEl = document.getElementById('inputWord');
+                inputEl.value = '';
+                inputEl.disabled = false;
+                const submitBtn = document.getElementById('btnSubmitWord');
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50');
+                document.getElementById('waitingMessage').classList.add('hidden');
+            });
+        };
+
+        function showToast(message) {
+            let toast = document.getElementById('customToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'customToast';
+                toast.className = 'fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-slate-900 border border-indigo-500/50 text-indigo-200 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold z-50 transition-all duration-300 opacity-0';
+                document.body.appendChild(toast);
+            }
+            toast.innerText = message;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
