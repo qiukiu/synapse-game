@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synapse - Fixed Parallel Tournament</title>
+    <title>Synapse - Permainan Hubungan Kata</title>
     <!-- Firebase App & Database SDKs (v9 Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -21,91 +21,91 @@
 
     <div class="w-full max-w-md glass rounded-2xl p-6 shadow-2xl relative overflow-hidden">
         <h1 class="text-3xl font-extrabold text-center tracking-tight mb-2 bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent">SYNAPSE</h1>
-        <p class="text-xs text-slate-400 text-center mb-6">Player-Generated Seed Edition</p>
+        <p class="text-xs text-slate-400 text-center mb-6">Permainan Sync Pikiran & Asosiasi Kata</p>
 
-        <!-- SETUP SCREEN -->
+        <!-- PENGATURAN AWAL (SETUP) -->
         <div id="screen-setup" class="space-y-4">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Your Name</label>
-                <input id="player-name" type="text" placeholder="Enter Nickname" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 text-white">
+                <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Nama Pemain</label>
+                <input id="player-name" type="text" placeholder="Masukkan Nama / Panggilan" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 text-white">
             </div>
 
             <div class="pt-2 space-y-3">
                 <div class="grid grid-cols-2 gap-2">
-                    <button onclick="hostRoom('public')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-2 rounded-lg text-xs uppercase tracking-wider transition shadow-lg">Host Public</button>
-                    <button onclick="hostRoom('private')" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-2 rounded-lg text-xs uppercase tracking-wider transition">Host Private</button>
+                    <button onclick="hostRoom('public')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-2 rounded-lg text-xs uppercase tracking-wider transition shadow-lg">Buat Publik</button>
+                    <button onclick="hostRoom('private')" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-2 rounded-lg text-xs uppercase tracking-wider transition">Buat Privat</button>
                 </div>
                 
-                <button onclick="joinPublicRoom()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-lg transition shadow-md">Quick Join Public Match</button>
+                <button onclick="joinPublicRoom()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-lg transition shadow-md">Cari Ruang Publik</button>
 
                 <div class="flex gap-2 pt-2 border-t border-slate-700">
-                    <input id="room-code-input" type="text" placeholder="ROOM CODE" class="w-1/2 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-center uppercase tracking-widest text-white">
-                    <button onclick="joinPrivateRoom()" class="w-1/2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition">Join Code</button>
+                    <input id="room-code-input" type="text" placeholder="KODE RUANG" class="w-1/2 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-center uppercase tracking-widest text-white">
+                    <button onclick="joinPrivateRoom()" class="w-1/2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition">Gabung Kode</button>
                 </div>
             </div>
         </div>
 
-        <!-- LOBBY SCREEN -->
+        <!-- LOBI (LOBBY) -->
         <div id="screen-lobby" class="hidden space-y-5 text-center">
             <div id="room-badge" class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                <span class="text-xs text-slate-400 block uppercase tracking-wider">Room Code (<span id="room-type-label">Private</span>)</span>
+                <span class="text-xs text-slate-400 block uppercase tracking-wider">Kode Ruang (<span id="room-type-label">Privat</span>)</span>
                 <span id="lobby-code-display" class="text-3xl font-black tracking-widest text-indigo-400">------</span>
             </div>
             
             <div>
-                <h3 class="text-sm font-medium text-slate-300 mb-2">Connected Players (<span id="player-count">1</span> Ready)</h3>
+                <h3 class="text-sm font-medium text-slate-300 mb-2">Pemain Terhubung (<span id="player-count">1</span> Siap)</h3>
                 <div id="player-list" class="space-y-2"></div>
             </div>
 
             <div id="host-controls" class="hidden">
-                <button id="start-btn" onclick="startParallelTournament()" disabled class="w-full bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg">Start Parallel Tournament</button>
+                <button id="start-btn" onclick="startParallelTournament()" disabled class="w-full bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg">Mulai Turnamen Paralel</button>
             </div>
-            <p id="waiting-msg" class="text-xs text-slate-400">Waiting for host to start...</p>
+            <p id="waiting-msg" class="text-xs text-slate-400">Menunggu Host memulai permainan...</p>
         </div>
 
-        <!-- GAMEPLAY SCREEN -->
+        <!-- PERMAINAN (GAMEPLAY) -->
         <div id="screen-game" class="hidden space-y-5">
-            <!-- Match Header -->
+            <!-- Header Pertandingan -->
             <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700 text-center space-y-1">
-                <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider" id="stage-heading">Tournament Stage 1</span>
+                <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider" id="stage-heading">Tahap Turnamen 1</span>
                 <div class="text-sm font-bold text-white flex justify-center items-center gap-2">
                     <span id="match-p1" class="text-cyan-300">---</span>
                     <span class="text-xs text-slate-400 uppercase">vs</span>
                     <span id="match-p2" class="text-amber-300">---</span>
                 </div>
-                <div class="text-xs text-slate-400">Match Round <b id="round-num" class="text-indigo-400">1</b></div>
+                <div class="text-xs text-slate-400">Ronde <b id="round-num" class="text-indigo-400">1</b></div>
             </div>
 
-            <!-- Seed & History Box -->
+            <!-- Kotak Kata Target -->
             <div class="bg-slate-800/80 p-4 rounded-xl text-center border border-indigo-500/30">
-                <span id="seed-title" class="text-xs text-slate-400 uppercase tracking-wider block mb-1">Target Concept</span>
+                <span id="seed-title" class="text-xs text-slate-400 uppercase tracking-wider block mb-1">Konsep Target</span>
                 <div id="seed-word" class="text-2xl font-black text-indigo-300 uppercase tracking-wide">---</div>
                 
                 <div id="history-box" class="hidden mt-3 pt-3 border-t border-slate-700 text-xs text-slate-400">
-                    Previous Inputs: <span id="prev-words" class="text-indigo-200 font-medium"></span>
+                    Kata Sebelumnya: <span id="prev-words" class="text-indigo-200 font-medium"></span>
                 </div>
             </div>
 
-            <!-- Input Section -->
+            <!-- Input Kata -->
             <div id="active-player-box" class="space-y-3">
                 <div id="input-section" class="space-y-3">
-                    <p id="input-instruction" class="text-xs text-slate-300 text-center">Type any word to generate your starting seed!</p>
-                    <input id="word-input" type="text" placeholder="Your secret word..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-center text-lg text-white focus:outline-none focus:border-indigo-500 uppercase">
+                    <p id="input-instruction" class="text-xs text-slate-300 text-center">Ketik kata bebas untuk menentukan kata dasar ronde pertama!</p>
+                    <input id="word-input" type="text" placeholder="Kata rahasia Anda..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-center text-lg text-white focus:outline-none focus:border-indigo-500 uppercase">
                     <p id="error-msg" class="text-xs text-red-400 text-center hidden font-medium"></p>
-                    <button onclick="submitWord()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-md">Lock In Answer</button>
+                    <button onclick="submitWord()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-md">Kirim Jawaban</button>
                 </div>
                 <div id="waiting-submission" class="hidden text-center py-4">
                     <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-500 border-t-transparent mb-2"></div>
-                    <p class="text-xs text-slate-400">Answer locked in! Waiting for your match opponent...</p>
+                    <p class="text-xs text-slate-400">Jawaban dikirim! Menunggu lawan memasukkan kata...</p>
                 </div>
             </div>
 
             <div id="bye-player-box" class="hidden text-center py-6 bg-slate-800/40 rounded-xl border border-slate-700">
-                <p class="text-xs text-amber-400 font-medium uppercase tracking-wider">You have a BYE this stage</p>
-                <p class="text-xs text-slate-400 mt-1">Other players are conducting their parallel matches...</p>
+                <p class="text-xs text-amber-400 font-medium uppercase tracking-wider">Anda Mendapat 'BYE' (Istirahat)</p>
+                <p class="text-xs text-slate-400 mt-1">Pemain lain sedang bertanding di tahap ini...</p>
             </div>
 
-            <!-- Round Result View -->
+            <!-- Tampilan Hasil Ronde -->
             <div id="round-result" class="hidden space-y-4 pt-2">
                 <div class="bg-slate-800/90 p-4 rounded-xl space-y-3 text-center border border-slate-700">
                     <div class="grid grid-cols-2 gap-2 text-sm">
@@ -119,10 +119,10 @@
                         </div>
                     </div>
 
-                    <!-- Temp Gauge -->
+                    <!-- Indikator Suhu / Sync -->
                     <div class="space-y-1">
                         <div class="flex justify-between text-xs">
-                            <span class="text-slate-400">Sync Level</span>
+                            <span class="text-slate-400">Tingkat Sync</span>
                             <span id="temp-val" class="font-bold text-amber-400">0°</span>
                         </div>
                         <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden">
@@ -133,41 +133,41 @@
                 </div>
 
                 <div id="match-won-banner" class="hidden bg-emerald-900/40 border border-emerald-500/50 p-3 rounded-xl text-center text-xs text-emerald-300 font-bold">
-                    🎉 Exact Match Found! Waiting for other tables to finish...
+                    🎉 Kata Sama Ditemukan! Menunggu meja lain selesai...
                 </div>
 
                 <div id="next-btn-box" class="hidden">
-                    <button onclick="nextRoundInMatch()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition">Continue This Match</button>
+                    <button onclick="nextRoundInMatch()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition">Lanjut ke Ronde Berikutnya</button>
                 </div>
             </div>
 
-            <!-- TOURNAMENT COMPLETE SCREEN -->
+            <!-- LAYAR SELESAI TURNAMEN -->
             <div id="tournament-complete" class="hidden space-y-4 pt-2 text-center">
                 <div class="bg-gradient-to-b from-indigo-950/90 to-slate-900 p-6 rounded-xl space-y-4 border border-emerald-500/50 shadow-xl">
                     <div class="text-4xl animate-bounce">🏆</div>
-                    <h2 class="text-2xl font-black text-emerald-400 uppercase tracking-wide">Tournament Complete!</h2>
+                    <h2 class="text-2xl font-black text-emerald-400 uppercase tracking-wide">Turnamen Selesai!</h2>
                     
                     <div class="space-y-3 text-left">
                         <div class="bg-slate-800/80 p-3 rounded-lg border border-indigo-500/40">
-                            <span class="text-xs text-indigo-300 block font-bold uppercase">👑 Best Couple Podium (Least Rounds)</span>
+                            <span class="text-xs text-indigo-300 block font-bold uppercase">👑 Pasangan Paling Sync (Ronde TerseDIKIT)</span>
                             <span id="podium-fewest-rounds" class="text-sm font-bold text-white">---</span>
                         </div>
                         <div class="bg-slate-800/80 p-3 rounded-lg border border-emerald-500/40">
-                            <span class="text-xs text-emerald-300 block font-bold uppercase">🌟 Ultimate Mind Reader (Least Sum of Rounds)</span>
+                            <span class="text-xs text-emerald-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
                             <span id="podium-ultimate-syncer" class="text-sm font-bold text-white">---</span>
                         </div>
                     </div>
                 </div>
                 <div class="space-y-2">
-                    <button id="rematch-btn" onclick="triggerRematch()" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">Rematch (Keep Players)</button>
-                    <button onclick="location.reload()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition">Leave to Main Menu</button>
+                    <button id="rematch-btn" onclick="triggerRematch()" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">Main Lagi (Pemain Sama)</button>
+                    <button onclick="location.reload()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition">Kembali ke Menu Utama</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyA6qJQATdxVxAeACL3Hie3_iQijkUPZDj4",
   authDomain: "synapse-multi-2f6d4.firebaseapp.com",
   databaseURL: "https://synapse-multi-2f6d4-default-rtdb.europe-west1.firebasedatabase.app",
@@ -188,7 +188,7 @@
         let isEvaluating = false;
         let currentForbiddenWords = [];
 
-        // --- NATIVE AUDIO SYNTHESIS JUICE ---
+        // --- EFEK SUARA NATIVE (WEB AUDIO API) ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSound(type) {
             if (!audioCtx) return;
@@ -232,7 +232,7 @@
         window.hostRoom = function(type) {
             playSound('click');
             playerName = document.getElementById('player-name').value.trim();
-            if (!playerName) return alert('Enter a name');
+            if (!playerName) return alert('Masukkan nama terlebih dahulu!');
 
             roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
             isHost = true;
@@ -246,7 +246,7 @@
             }).then(() => {
                 listenToRoom();
                 showScreen('screen-lobby');
-                document.getElementById('room-type-label').innerText = type === 'public' ? 'Public' : 'Private';
+                document.getElementById('room-type-label').innerText = type === 'public' ? 'Publik' : 'Privat';
             });
         };
 
@@ -254,7 +254,7 @@
             playSound('click');
             playerName = document.getElementById('player-name').value.trim();
             const code = document.getElementById('room-code-input').value.trim().toUpperCase();
-            if (!playerName || !code) return alert('Enter name and code');
+            if (!playerName || !code) return alert('Masukkan nama dan kode ruang!');
 
             roomId = code;
             connectToRoom();
@@ -263,7 +263,7 @@
         window.joinPublicRoom = function() {
             playSound('click');
             playerName = document.getElementById('player-name').value.trim();
-            if (!playerName) return alert('Enter a name');
+            if (!playerName) return alert('Masukkan nama terlebih dahulu!');
 
             db.ref('rooms').once('value').then(snap => {
                 const rooms = snap.val() || {};
@@ -291,9 +291,9 @@
 
         function connectToRoom() {
             db.ref('rooms/' + roomId).once('value').then(snapshot => {
-                if (!snapshot.exists()) return alert('Room not found!');
+                if (!snapshot.exists()) return alert('Ruangan tidak ditemukan!');
                 const room = snapshot.val();
-                if (room.status !== 'lobby') return alert('Game already started!');
+                if (room.status !== 'lobby') return alert('Permainan sudah dimulai!');
 
                 db.ref(`rooms/${roomId}/players/${playerId}`).set({
                     name: playerName,
@@ -301,7 +301,7 @@
                 }).then(() => {
                     listenToRoom();
                     showScreen('screen-lobby');
-                    document.getElementById('room-type-label').innerText = room.type === 'public' ? 'Public' : 'Private';
+                    document.getElementById('room-type-label').innerText = room.type === 'public' ? 'Publik' : 'Privat';
                 });
             });
         }
@@ -333,7 +333,7 @@
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 const room = snap.val();
                 const pIds = Object.keys(room.players || {});
-                if (pIds.length < 2) return alert('Need at least 2 players!');
+                if (pIds.length < 2) return alert('Dibutuhkan minimal 2 pemain!');
 
                 const stages = generateParallelStages(pIds);
                 initializeStageMatches(roomId, stages, 0);
@@ -373,7 +373,7 @@
                 const playersArr = Object.entries(playersObj);
                 document.getElementById('player-count').innerText = playersArr.length;
                 document.getElementById('player-list').innerHTML = playersArr.map(([id, p]) => 
-                    `<div class="bg-slate-800 p-2 rounded text-sm font-medium flex justify-between"><span>${p.name}</span> <span class="text-xs text-indigo-400">${p.host ? 'Host' : 'Player'}</span></div>`
+                    `<div class="bg-slate-800 p-2 rounded text-sm font-medium flex justify-between"><span>${p.name}</span> <span class="text-xs text-indigo-400">${p.host ? 'Host' : 'Pemain'}</span></div>`
                 ).join('');
 
                 if (isHost) {
@@ -400,7 +400,7 @@
 
                     document.getElementById('tournament-complete').classList.add('hidden');
                     const stageIdx = room.currentStageIndex || 0;
-                    document.getElementById('stage-heading').innerText = `Tournament Stage ${stageIdx + 1} of ${room.stages ? room.stages.length : 1}`;
+                    document.getElementById('stage-heading').innerText = `Tahap Turnamen ${stageIdx + 1} dari ${room.stages ? room.stages.length : 1}`;
 
                     const activeMatches = room.activeMatches || {};
                     let myMatchKey = null;
@@ -435,13 +435,13 @@
                         const instructionEl = document.getElementById('input-instruction');
 
                         if (myMatch.round === 1 && !myMatch.seed) {
-                            seedTitleEl.innerText = "Round 1 Objective";
-                            seedEl.innerText = "✍️ ENTER YOUR OWN SEED WORD";
-                            instructionEl.innerText = "Type any word. Both of your words will combine to form Round 2's target!";
+                            seedTitleEl.innerText = "Tujuan Ronde 1";
+                            seedEl.innerText = "✍️ MASUKKAN KATA BEBAS ANDA";
+                            instructionEl.innerText = "Ketik kata bebas. Kata Anda dan lawan akan digabung menjadi target di Ronde 2!";
                         } else {
-                            seedTitleEl.innerText = "Target Concept";
+                            seedTitleEl.innerText = "Konsep Target";
                             seedEl.innerText = myMatch.seed;
-                            instructionEl.innerText = "Type the word you think your partner will associate!";
+                            instructionEl.innerText = "Ketik kata yang menurut Anda berasosiasi dengan konsep ini!";
                         }
 
                         if (myMatch.history) {
@@ -455,7 +455,6 @@
                         const inputsCount = currentRoundData && currentRoundData.inputs ? Object.keys(currentRoundData.inputs).length : 0;
                         const mySubmission = currentRoundData && currentRoundData.inputs ? currentRoundData.inputs[playerId] : null;
 
-                        // Robust evaluation trigger checking both players' submissions
                         if (inputsCount === 2 && !currentRoundData.completed && !isEvaluating) {
                             evaluateMatchRound(myMatchKey, myMatch);
                         }
@@ -480,7 +479,7 @@
                                 tempBar.classList.remove('glow');
                             }
 
-                            document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match Found!' : score > 50 ? '⚡ Warm Sync!' : '❄️ Freezing Connection';
+                            document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match! Sempurna!' : score > 50 ? '⚡ Hangat & Berasosiasi!' : '❄️ Koneksi Masih Dingin';
 
                             if (myMatch.status === 'completed') {
                                 document.getElementById('match-won-banner').classList.remove('hidden');
@@ -514,10 +513,10 @@
             errEl.classList.add('hidden');
 
             const word = document.getElementById('word-input').value.trim().toUpperCase();
-            if (!word) return alert('Type a word!');
+            if (!word) return alert('Ketik sebuah kata!');
 
             if (currentForbiddenWords.includes(word)) {
-                errEl.innerText = `"${word}" was already used as a seed word!`;
+                errEl.innerText = `"${word}" sudah pernah digunakan sebagai kata target!`;
                 errEl.classList.remove('hidden');
                 return;
             }
@@ -541,6 +540,17 @@
             });
         };
 
+        // Helper penerjemah kata Bahasa Indonesia ke Bahasa Inggris untuk skor Datamuse
+        async function translateToEN(word) {
+            try {
+                const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=id&tl=en&dt=t&q=${encodeURIComponent(word)}`);
+                const data = await res.json();
+                return data[0][0][0].toLowerCase().trim();
+            } catch(e) {
+                return word.toLowerCase();
+            }
+        }
+
         async function evaluateMatchRound(matchKey, match) {
             isEvaluating = true;
             const currentRound = match.round;
@@ -559,10 +569,10 @@
                 return;
             }
 
-            const w1 = p1Input.toLowerCase();
-            const w2 = p2Input.toLowerCase();
+            const raw1 = p1Input.trim().toLowerCase();
+            const raw2 = p2Input.trim().toLowerCase();
 
-            // Round 1: Player-generated seeds setup
+            // Ronde 1: Kata input pemain digabungkan menjadi kata dasar Ronde 2
             if (currentRound === 1 && !match.seed) {
                 const generatedSeed = `${p1Input.toUpperCase()} + ${p2Input.toUpperCase()}`;
                 const updatedUsed = [...(match.usedSeeds || []), p1Input.toUpperCase(), p2Input.toUpperCase()];
@@ -576,20 +586,23 @@
                     round: 2,
                     seed: generatedSeed,
                     usedSeeds: updatedUsed,
-                    history: `Generated Seed from Round 1`
+                    history: `Kata Dasar dari Ronde 1`
                 });
                 isEvaluating = false;
                 return;
             }
 
             let score = 10;
-            let isExactMatch = (w1 === w2);
+            let isExactMatch = (raw1 === raw2);
 
             if (isExactMatch) {
                 score = 100;
                 playSound('sync');
             } else {
                 try {
+                    // Terjemahkan ke Bahasa Inggris untuk pencarian asosiasi sinonim di Datamuse API
+                    const [w1, w2] = await Promise.all([translateToEN(raw1), translateToEN(raw2)]);
+
                     const res = await fetch(`https://api.datamuse.com/words?rel_syn=${w1}&max=50`);
                     const syns = await res.json();
                     const found = syns.find(s => s.word.toLowerCase() === w2);
@@ -699,7 +712,7 @@
             const players = room.players || {};
 
             if (results.length === 0) {
-                document.getElementById('podium-fewest-rounds').innerText = 'No matches recorded';
+                document.getElementById('podium-fewest-rounds').innerText = 'Belum ada pertandingan tercatat';
                 document.getElementById('podium-ultimate-syncer').innerText = 'N/A';
                 return;
             }
@@ -708,7 +721,7 @@
             const bestCouple = results[0];
             const pA = players[bestCouple.p1]?.name || 'P1';
             const pB = players[bestCouple.p2]?.name || 'P2';
-            document.getElementById('podium-fewest-rounds').innerHTML = `${pA} & ${pB} — <b class="text-amber-300">${bestCouple.roundsTaken} rounds</b> (${bestCouple.winningWord})`;
+            document.getElementById('podium-fewest-rounds').innerHTML = `${pA} & ${pB} — <b class="text-amber-300">${bestCouple.roundsTaken} ronde</b> (${bestCouple.winningWord})`;
 
             const playerTotals = {};
             results.forEach(res => {
@@ -726,8 +739,8 @@
                 }
             }
 
-            const ultimateName = players[bestPlayerId]?.name || 'Player';
-            document.getElementById('podium-ultimate-syncer').innerHTML = `${ultimateName} — <b class="text-emerald-300">Total Sum: ${minSum} rounds</b>`;
+            const ultimateName = players[bestPlayerId]?.name || 'Pemain';
+            document.getElementById('podium-ultimate-syncer').innerHTML = `${ultimateName} — <b class="text-emerald-300">Total Sum: ${minSum} ronde</b>`;
         }
     </script>
 </body>
