@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synapse - Parallel Tournament Mind-Sync</title>
+    <title>Synapse - Independent Parallel Matches</title>
     <!-- Firebase App & Database SDKs (v9 Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -19,7 +19,7 @@
 
     <div class="w-full max-w-md glass rounded-2xl p-6 shadow-2xl relative overflow-hidden">
         <h1 class="text-3xl font-extrabold text-center tracking-tight mb-2 bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent">SYNAPSE</h1>
-        <p class="text-xs text-slate-400 text-center mb-6">Parallel Tournament Mind-Sync Game</p>
+        <p class="text-xs text-slate-400 text-center mb-6">Independent Parallel Tournament</p>
 
         <!-- SETUP SCREEN -->
         <div id="screen-setup" class="space-y-4">
@@ -71,7 +71,7 @@
                     <span class="text-xs text-slate-400 uppercase">vs</span>
                     <span id="match-p2" class="text-amber-300">---</span>
                 </div>
-                <div class="text-xs text-slate-400">Round <b id="round-num" class="text-indigo-400">1</b></div>
+                <div class="text-xs text-slate-400">Match Round <b id="round-num" class="text-indigo-400">1</b></div>
             </div>
 
             <!-- Seed & History Box -->
@@ -131,11 +131,11 @@
                 </div>
 
                 <div id="match-won-banner" class="hidden bg-emerald-900/40 border border-emerald-500/50 p-3 rounded-xl text-center text-xs text-emerald-300 font-bold">
-                    🎉 Exact Match! Match Completed! Waiting for all parallel matches to finish...
+                    🎉 Exact Match Found! Waiting for other tables to finish...
                 </div>
 
                 <div id="next-btn-box" class="hidden">
-                    <button onclick="nextRoundInMatch()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition">Next Round</button>
+                    <button onclick="nextRoundInMatch()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition">Continue This Match</button>
                 </div>
             </div>
 
@@ -261,10 +261,9 @@
             });
         }
 
-        // Generate Parallel Round Schedule (Round-Robin algorithm)
         function generateParallelStages(playerIds) {
             const pool = [...playerIds];
-            if (pool.length % 2 !== 0) pool.push('BYE'); // Pad odd player count
+            if (pool.length % 2 !== 0) pool.push('BYE');
 
             const n = pool.length;
             const stages = [];
@@ -279,8 +278,6 @@
                     }
                 }
                 stages.push(stageMatches);
-
-                // Rotate array (keep pool[0] fixed)
                 pool.splice(1, 0, pool.pop());
             }
             return stages;
@@ -293,29 +290,31 @@
                 if (pIds.length < 2) return alert('Need at least 2 players!');
 
                 const stages = generateParallelStages(pIds);
-
-                // Initialize state for stage 0 matches
-                const initialStageMatches = {};
-                stages[0].forEach(m => {
-                    const seed = starterSeeds[Math.floor(Math.random() * starterSeeds.length)];
-                    initialStageMatches[m.matchKey] = {
-                        p1: m.p1,
-                        p2: m.p2,
-                        round: 1,
-                        seed: seed,
-                        usedSeeds: [seed],
-                        status: 'playing'
-                    };
-                });
-
-                db.ref('rooms/' + roomId).update({
-                    status: 'playing',
-                    stages: stages,
-                    currentStageIndex: 0,
-                    activeMatches: initialStageMatches
-                });
+                initializeStageMatches(roomId, stages, 0);
             });
         };
+
+        function initializeStageMatches(rId, stages, stageIdx) {
+            const initialStageMatches = {};
+            stages[stageIdx].forEach(m => {
+                const seed = starterSeeds[Math.floor(Math.random() * starterSeeds.length)];
+                initialStageMatches[m.matchKey] = {
+                    p1: m.p1,
+                    p2: m.p2,
+                    round: 1,
+                    seed: seed,
+                    usedSeeds: [seed],
+                    status: 'playing'
+                };
+            });
+
+            db.ref('rooms/' + rId).update({
+                status: 'playing',
+                stages: stages,
+                currentStageIndex: stageIdx,
+                activeMatches: initialStageMatches
+            });
+        }
 
         function listenToRoom() {
             document.getElementById('lobby-code-display').innerText = roomId;
@@ -365,7 +364,6 @@
                     }
 
                     if (!myMatch) {
-                        // Player has a BYE in this stage
                         document.getElementById('active-player-box').classList.add('hidden');
                         document.getElementById('bye-player-box').classList.remove('hidden');
                         document.getElementById('round-result').classList.add('hidden');
@@ -405,7 +403,7 @@
                             const score = currentRoundData.score;
                             document.getElementById('temp-val').innerText = score + '°';
                             document.getElementById('temp-bar').style.width = score + '%';
-                            document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match!' : score > 50 ? '⚡ Warm Sync!' : '❄️ Freezing Connection';
+                            document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match Found!' : score > 50 ? '⚡ Warm Sync!' : '❄️ Freezing Connection';
 
                             if (myMatch.status === 'completed') {
                                 document.getElementById('match-won-banner').classList.remove('hidden');
@@ -425,13 +423,11 @@
                             document.getElementById('error-msg').classList.add('hidden');
                         }
 
-                        // Host evaluates inputs when both submit
                         if (isHost && currentRoundData && currentRoundData.inputs && Object.keys(currentRoundData.inputs).length === 2 && !currentRoundData.completed) {
                             evaluateMatchRound(myMatchKey, myMatch);
                         }
                     }
 
-                    // Host checks if all parallel matches in current stage are completed
                     if (isHost) {
                         checkStageCompletion(room);
                     }
@@ -497,16 +493,13 @@
                 } catch (e) { score = 30; }
             }
 
-            const isMatchComplete = isExactMatch;
-
             db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).update({
                 score: score,
                 completed: true
             });
 
-            if (isMatchComplete) {
+            if (isExactMatch) {
                 db.ref(`rooms/${roomId}/activeMatches/${matchKey}`).update({ status: 'completed' });
-                // Record completed match stats
                 db.ref(`rooms/${roomId}/completedResults/${matchKey}`).set({
                     p1: match.p1,
                     p2: match.p2,
@@ -589,14 +582,12 @@
                 return;
             }
 
-            // Category 1: Couple with least number of rounds in a match
             results.sort((a, b) => a.roundsTaken - b.roundsTaken);
             const bestCouple = results[0];
             const pA = players[bestCouple.p1]?.name || 'P1';
             const pB = players[bestCouple.p2]?.name || 'P2';
             document.getElementById('podium-fewest-rounds').innerHTML = `${pA} & ${pB} — <b class="text-amber-300">${bestCouple.roundsTaken} rounds</b> (${bestCouple.winningWord})`;
 
-            // Category 2: Ultimate Mind Reader (Least sum of rounds)
             const playerTotals = {};
             results.forEach(res => {
                 [res.p1, res.p2].forEach(pId => {
