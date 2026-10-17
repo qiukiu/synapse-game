@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synapse - Independent Parallel Matches</title>
+    <title>Synapse - Parallel Tournament</title>
     <!-- Firebase App & Database SDKs (v9 Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -388,7 +388,13 @@
                         }
 
                         const currentRoundData = myMatch.rounds ? myMatch.rounds[myMatch.round] : null;
+                        const inputsCount = currentRoundData && currentRoundData.inputs ? Object.keys(currentRoundData.inputs).length : 0;
                         const mySubmission = currentRoundData && currentRoundData.inputs ? currentRoundData.inputs[playerId] : null;
+
+                        // Trigger evaluation as soon as both clients submit (handled by any client or host)
+                        if (inputsCount === 2 && !currentRoundData.completed) {
+                            evaluateMatchRound(myMatchKey, myMatch);
+                        }
 
                         if (currentRoundData && currentRoundData.completed) {
                             document.getElementById('input-section').classList.add('hidden');
@@ -421,10 +427,6 @@
                             document.getElementById('waiting-submission').classList.add('hidden');
                             document.getElementById('round-result').classList.add('hidden');
                             document.getElementById('error-msg').classList.add('hidden');
-                        }
-
-                        if (isHost && currentRoundData && currentRoundData.inputs && Object.keys(currentRoundData.inputs).length === 2 && !currentRoundData.completed) {
-                            evaluateMatchRound(myMatchKey, myMatch);
                         }
                     }
 
@@ -470,8 +472,13 @@
         async function evaluateMatchRound(matchKey, match) {
             const currentRound = match.round;
             const roundData = match.rounds[currentRound];
-            const w1 = roundData.inputs[match.p1].toLowerCase();
-            const w2 = roundData.inputs[match.p2].toLowerCase();
+            if (!roundData || roundData.completed) return;
+
+            const inputs = Object.values(roundData.inputs || {});
+            if (inputs.length < 2) return;
+
+            const w1 = inputs[0].toLowerCase();
+            const w2 = inputs[1].toLowerCase();
 
             let score = 10;
             let isExactMatch = (w1 === w2);
@@ -504,7 +511,7 @@
                     p1: match.p1,
                     p2: match.p2,
                     roundsTaken: currentRound,
-                    winningWord: roundData.inputs[match.p1]
+                    winningWord: inputs[0].toUpperCase()
                 });
             }
         }
