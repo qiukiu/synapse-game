@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synapse - Tournament Mind-Sync Game</title>
+    <title>Synapse - Parallel Tournament Mind-Sync</title>
     <!-- Firebase App & Database SDKs (v9 Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -19,7 +19,7 @@
 
     <div class="w-full max-w-md glass rounded-2xl p-6 shadow-2xl relative overflow-hidden">
         <h1 class="text-3xl font-extrabold text-center tracking-tight mb-2 bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent">SYNAPSE</h1>
-        <p class="text-xs text-slate-400 text-center mb-6">Multiplayer Tournament Mind-Sync Game</p>
+        <p class="text-xs text-slate-400 text-center mb-6">Parallel Tournament Mind-Sync Game</p>
 
         <!-- SETUP SCREEN -->
         <div id="screen-setup" class="space-y-4">
@@ -56,22 +56,22 @@
             </div>
 
             <div id="host-controls" class="hidden">
-                <button id="start-btn" onclick="startTournament()" disabled class="w-full bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg">Start Tournament Matches</button>
+                <button id="start-btn" onclick="startParallelTournament()" disabled class="w-full bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg">Start Parallel Tournament</button>
             </div>
-            <p id="waiting-msg" class="text-xs text-slate-400">Waiting for host to start the tournament...</p>
+            <p id="waiting-msg" class="text-xs text-slate-400">Waiting for host to start...</p>
         </div>
 
         <!-- GAMEPLAY SCREEN -->
         <div id="screen-game" class="hidden space-y-5">
             <!-- Match Header -->
             <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700 text-center space-y-1">
-                <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider" id="match-heading">Match 1 of X</span>
+                <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider" id="stage-heading">Tournament Stage 1</span>
                 <div class="text-sm font-bold text-white flex justify-center items-center gap-2">
                     <span id="match-p1" class="text-cyan-300">---</span>
                     <span class="text-xs text-slate-400 uppercase">vs</span>
                     <span id="match-p2" class="text-amber-300">---</span>
                 </div>
-                <div class="text-xs text-slate-400">Round <b id="round-num" class="text-indigo-400">1</b> | Avg Sync: <b id="total-score" class="text-emerald-400">0°</b></div>
+                <div class="text-xs text-slate-400">Round <b id="round-num" class="text-indigo-400">1</b></div>
             </div>
 
             <!-- Seed & History Box -->
@@ -84,23 +84,23 @@
                 </div>
             </div>
 
-            <!-- Input Area (Only active for the two players in this match) -->
-            <div id="active-player-box" class="hidden space-y-3">
+            <!-- Input Section -->
+            <div id="active-player-box" class="space-y-3">
                 <div id="input-section" class="space-y-3">
-                    <p class="text-xs text-slate-300 text-center">Type the word you think your opponent will match!</p>
+                    <p class="text-xs text-slate-300 text-center">Type the word you think your partner will associate!</p>
                     <input id="word-input" type="text" placeholder="Your secret word..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-center text-lg text-white focus:outline-none focus:border-indigo-500 uppercase">
                     <p id="error-msg" class="text-xs text-red-400 text-center hidden font-medium"></p>
                     <button onclick="submitWord()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-md">Lock In Answer</button>
                 </div>
                 <div id="waiting-submission" class="hidden text-center py-4">
                     <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-500 border-t-transparent mb-2"></div>
-                    <p class="text-xs text-slate-400">Answer locked in! Waiting for opponent...</p>
+                    <p class="text-xs text-slate-400">Answer locked in! Waiting for your match opponent...</p>
                 </div>
             </div>
 
-            <div id="spectator-box" class="hidden text-center py-6 bg-slate-800/40 rounded-xl border border-slate-700">
-                <p class="text-xs text-amber-400 font-medium uppercase tracking-wider">You are spectating this match</p>
-                <p class="text-xs text-slate-400 mt-1">Players are locking in their mind-sync words...</p>
+            <div id="bye-player-box" class="hidden text-center py-6 bg-slate-800/40 rounded-xl border border-slate-700">
+                <p class="text-xs text-amber-400 font-medium uppercase tracking-wider">You have a BYE this stage</p>
+                <p class="text-xs text-slate-400 mt-1">Other players are conducting their parallel matches...</p>
             </div>
 
             <!-- Round Result View -->
@@ -130,10 +130,13 @@
                     </div>
                 </div>
 
-                <div id="host-next-btn" class="hidden">
-                    <button onclick="nextMatchOrRound()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition">Continue Tournament</button>
+                <div id="match-won-banner" class="hidden bg-emerald-900/40 border border-emerald-500/50 p-3 rounded-xl text-center text-xs text-emerald-300 font-bold">
+                    🎉 Exact Match! Match Completed! Waiting for all parallel matches to finish...
                 </div>
-                <p id="client-wait-next" class="hidden text-center text-xs text-slate-400 animate-pulse">Waiting for host to continue...</p>
+
+                <div id="next-btn-box" class="hidden">
+                    <button onclick="nextRoundInMatch()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition">Next Round</button>
+                </div>
             </div>
 
             <!-- TOURNAMENT COMPLETE SCREEN -->
@@ -193,20 +196,11 @@
             roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
             isHost = true;
 
-            const initialSeed = starterSeeds[Math.floor(Math.random() * starterSeeds.length)];
-
             db.ref('rooms/' + roomId).set({
                 status: 'lobby',
                 type: type,
-                currentMatchIndex: 0,
-                round: 1,
-                seed: initialSeed,
-                totalScoreSum: 0,
-                usedSeeds: [initialSeed],
-                history: "",
-                players: {
-                    [playerId]: { name: playerName, host: true }
-                }
+                currentStageIndex: 0,
+                players: { [playerId]: { name: playerName, host: true } }
             }).then(() => {
                 listenToRoom();
                 showScreen('screen-lobby');
@@ -227,7 +221,6 @@
             playerName = document.getElementById('player-name').value.trim();
             if (!playerName) return alert('Enter a name');
 
-            // Find an open public room in lobby state
             db.ref('rooms').once('value').then(snap => {
                 const rooms = snap.val() || {};
                 let foundRoomId = null;
@@ -235,7 +228,7 @@
                 for (const [rId, rData] of Object.entries(rooms)) {
                     if (rData.status === 'lobby' && rData.type === 'public') {
                         const count = Object.keys(rData.players || {}).length;
-                        if (count < 6) { // Max 6 players per lobby
+                        if (count < 8) {
                             foundRoomId = rId;
                             break;
                         }
@@ -243,25 +236,7 @@
                 }
 
                 if (!foundRoomId) {
-                    // Host one automatically if none exist
-                    roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    isHost = true;
-                    const initialSeed = starterSeeds[Math.floor(Math.random() * starterSeeds.length)];
-                    db.ref('rooms/' + roomId).set({
-                        status: 'lobby',
-                        type: 'public',
-                        currentMatchIndex: 0,
-                        round: 1,
-                        seed: initialSeed,
-                        totalScoreSum: 0,
-                        usedSeeds: [initialSeed],
-                        history: "",
-                        players: { [playerId]: { name: playerName, host: true } }
-                    }).then(() => {
-                        listenToRoom();
-                        showScreen('screen-lobby');
-                        document.getElementById('room-type-label').innerText = 'Public';
-                    });
+                    hostRoom('public');
                 } else {
                     roomId = foundRoomId;
                     connectToRoom();
@@ -286,30 +261,58 @@
             });
         }
 
-        function generateMatchups(playerIds) {
-            const matches = [];
-            for (let i = 0; i < playerIds.length; i++) {
-                for (let j = i + 1; j < playerIds.length; j++) {
-                    matches.push({ p1: playerIds[i], p2: playerIds[j] });
+        // Generate Parallel Round Schedule (Round-Robin algorithm)
+        function generateParallelStages(playerIds) {
+            const pool = [...playerIds];
+            if (pool.length % 2 !== 0) pool.push('BYE'); // Pad odd player count
+
+            const n = pool.length;
+            const stages = [];
+
+            for (let round = 0; round < n - 1; round++) {
+                const stageMatches = [];
+                for (let i = 0; i < n / 2; i++) {
+                    const p1 = pool[i];
+                    const p2 = pool[n - 1 - i];
+                    if (p1 !== 'BYE' && p2 !== 'BYE') {
+                        stageMatches.push({ p1, p2, matchKey: `${p1}_vs_${p2}` });
+                    }
                 }
+                stages.push(stageMatches);
+
+                // Rotate array (keep pool[0] fixed)
+                pool.splice(1, 0, pool.pop());
             }
-            return matches;
+            return stages;
         }
 
-        window.startTournament = function() {
+        window.startParallelTournament = function() {
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 const room = snap.val();
                 const pIds = Object.keys(room.players || {});
                 if (pIds.length < 2) return alert('Need at least 2 players!');
 
-                const matchups = generateMatchups(pIds);
+                const stages = generateParallelStages(pIds);
+
+                // Initialize state for stage 0 matches
+                const initialStageMatches = {};
+                stages[0].forEach(m => {
+                    const seed = starterSeeds[Math.floor(Math.random() * starterSeeds.length)];
+                    initialStageMatches[m.matchKey] = {
+                        p1: m.p1,
+                        p2: m.p2,
+                        round: 1,
+                        seed: seed,
+                        usedSeeds: [seed],
+                        status: 'playing'
+                    };
+                });
 
                 db.ref('rooms/' + roomId).update({
                     status: 'playing',
-                    matchups: matchups,
-                    currentMatchIndex: 0,
-                    round: 1,
-                    history: ""
+                    stages: stages,
+                    currentStageIndex: 0,
+                    activeMatches: initialStageMatches
                 });
             });
         };
@@ -321,7 +324,6 @@
                 const room = snapshot.val();
                 if (!room) return;
 
-                // Lobby state
                 const playersObj = room.players || {};
                 const playersArr = Object.entries(playersObj);
                 document.getElementById('player-count').innerText = playersArr.length;
@@ -335,97 +337,103 @@
                     document.getElementById('waiting-msg').classList.add('hidden');
                 }
 
-                // Game state
                 if (room.status === 'playing' || room.status === 'finished') {
                     showScreen('screen-game');
-                    currentForbiddenWords = room.usedSeeds || [];
-
-                    const matches = room.matchups || [];
-                    const matchIdx = room.currentMatchIndex || 0;
 
                     if (room.status === 'finished') {
-                        showScreen('screen-game');
                         document.getElementById('active-player-box').classList.add('hidden');
-                        document.getElementById('spectator-box').classList.add('hidden');
+                        document.getElementById('bye-player-box').classList.add('hidden');
                         document.getElementById('round-result').classList.add('hidden');
                         document.getElementById('tournament-complete').classList.remove('hidden');
-
                         renderPodium(room);
                         return;
                     }
 
-                    const currentMatch = matches[matchIdx];
-                    if (!currentMatch) return;
+                    const stageIdx = room.currentStageIndex || 0;
+                    document.getElementById('stage-heading').innerText = `Tournament Stage ${stageIdx + 1} of ${room.stages ? room.stages.length : 1}`;
 
-                    const p1Info = playersObj[currentMatch.p1] || { name: 'P1' };
-                    const p2Info = playersObj[currentMatch.p2] || { name: 'P2' };
+                    const activeMatches = room.activeMatches || {};
+                    let myMatchKey = null;
+                    let myMatch = null;
 
-                    document.getElementById('match-heading').innerText = `Match ${matchIdx + 1} of ${matches.length}`;
-                    document.getElementById('match-p1').innerText = p1Info.name;
-                    document.getElementById('match-p2').innerText = p2Info.name;
-
-                    document.getElementById('round-num').innerText = room.round;
-                    const avgScore = room.round > 1 ? Math.round((room.totalScoreSum || 0) / (room.round - 1)) : 0;
-                    document.getElementById('total-score').innerText = avgScore + '°';
-                    document.getElementById('seed-word').innerText = room.seed;
-
-                    if (room.history) {
-                        document.getElementById('history-box').classList.remove('hidden');
-                        document.getElementById('prev-words').innerText = room.history;
-                    } else {
-                        document.getElementById('history-box').classList.add('hidden');
-                    }
-
-                    // Check if current user is part of this active match
-                    const isParticipant = (playerId === currentMatch.p1 || playerId === currentMatch.p2);
-                    if (isParticipant) {
-                        document.getElementById('active-player-box').classList.remove('hidden');
-                        document.getElementById('spectator-box').classList.add('hidden');
-                    } else {
-                        document.getElementById('active-player-box').classList.add('hidden');
-                        document.getElementById('spectator-box').classList.remove('hidden');
-                    }
-
-                    const matchRoundPath = `matches/${matchIdx}/rounds/${room.round}`;
-                    const currentRoundData = room.matches && room.matches[matchIdx] && room.matches[matchIdx].rounds ? room.matches[matchIdx].rounds[room.round] : null;
-                    const mySubmission = currentRoundData && currentRoundData.inputs ? currentRoundData.inputs[playerId] : null;
-
-                    if (currentRoundData && currentRoundData.completed) {
-                        document.getElementById('input-section').classList.add('hidden');
-                        document.getElementById('waiting-submission').classList.add('hidden');
-                        document.getElementById('round-result').classList.remove('hidden');
-
-                        document.getElementById('res-p1-label').innerText = p1Info.name;
-                        document.getElementById('res-p1-val').innerText = currentRoundData.inputs[currentMatch.p1];
-                        document.getElementById('res-p2-label').innerText = p2Info.name;
-                        document.getElementById('res-p2-val').innerText = currentRoundData.inputs[currentMatch.p2];
-
-                        const score = currentRoundData.score;
-                        document.getElementById('temp-val').innerText = score + '°';
-                        document.getElementById('temp-bar').style.width = score + '%';
-                        document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match! Match Won!' : score > 50 ? '⚡ Warm Sync!' : '❄️ Freezing Connection';
-
-                        if (isHost) {
-                            document.getElementById('host-next-btn').classList.remove('hidden');
-                            document.getElementById('client-wait-next').classList.add('hidden');
-                        } else {
-                            document.getElementById('host-next-btn').classList.add('hidden');
-                            document.getElementById('client-wait-next').classList.remove('hidden');
+                    for (const [key, match] of Object.entries(activeMatches)) {
+                        if (match.p1 === playerId || match.p2 === playerId) {
+                            myMatchKey = key;
+                            myMatch = match;
+                            break;
                         }
-                    } else if (mySubmission) {
-                        document.getElementById('input-section').classList.add('hidden');
-                        document.getElementById('waiting-submission').classList.remove('hidden');
-                        document.getElementById('round-result').classList.add('hidden');
-                    } else {
-                        document.getElementById('input-section').classList.remove('hidden');
-                        document.getElementById('waiting-submission').classList.add('hidden');
-                        document.getElementById('round-result').classList.add('hidden');
-                        document.getElementById('error-msg').classList.add('hidden');
                     }
 
-                    // Host evaluates inputs when both match participants submit
-                    if (isHost && currentRoundData && currentRoundData.inputs && Object.keys(currentRoundData.inputs).length === 2 && !currentRoundData.completed) {
-                        evaluateMatchRound(room, matchIdx, currentMatch);
+                    if (!myMatch) {
+                        // Player has a BYE in this stage
+                        document.getElementById('active-player-box').classList.add('hidden');
+                        document.getElementById('bye-player-box').classList.remove('hidden');
+                        document.getElementById('round-result').classList.add('hidden');
+                    } else {
+                        document.getElementById('active-player-box').classList.remove('hidden');
+                        document.getElementById('bye-player-box').classList.add('hidden');
+
+                        const p1Name = playersObj[myMatch.p1]?.name || 'P1';
+                        const p2Name = playersObj[myMatch.p2]?.name || 'P2';
+                        document.getElementById('match-p1').innerText = p1Name;
+                        document.getElementById('match-p2').innerText = p2Name;
+
+                        document.getElementById('round-num').innerText = myMatch.round;
+                        document.getElementById('seed-word').innerText = myMatch.seed;
+                        currentForbiddenWords = myMatch.usedSeeds || [];
+
+                        if (myMatch.history) {
+                            document.getElementById('history-box').classList.remove('hidden');
+                            document.getElementById('prev-words').innerText = myMatch.history;
+                        } else {
+                            document.getElementById('history-box').classList.add('hidden');
+                        }
+
+                        const currentRoundData = myMatch.rounds ? myMatch.rounds[myMatch.round] : null;
+                        const mySubmission = currentRoundData && currentRoundData.inputs ? currentRoundData.inputs[playerId] : null;
+
+                        if (currentRoundData && currentRoundData.completed) {
+                            document.getElementById('input-section').classList.add('hidden');
+                            document.getElementById('waiting-submission').classList.add('hidden');
+                            document.getElementById('round-result').classList.remove('hidden');
+
+                            document.getElementById('res-p1-label').innerText = p1Name;
+                            document.getElementById('res-p1-val').innerText = currentRoundData.inputs[myMatch.p1];
+                            document.getElementById('res-p2-label').innerText = p2Name;
+                            document.getElementById('res-p2-val').innerText = currentRoundData.inputs[myMatch.p2];
+
+                            const score = currentRoundData.score;
+                            document.getElementById('temp-val').innerText = score + '°';
+                            document.getElementById('temp-bar').style.width = score + '%';
+                            document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match!' : score > 50 ? '⚡ Warm Sync!' : '❄️ Freezing Connection';
+
+                            if (myMatch.status === 'completed') {
+                                document.getElementById('match-won-banner').classList.remove('hidden');
+                                document.getElementById('next-btn-box').classList.add('hidden');
+                            } else {
+                                document.getElementById('match-won-banner').classList.add('hidden');
+                                document.getElementById('next-btn-box').classList.remove('hidden');
+                            }
+                        } else if (mySubmission) {
+                            document.getElementById('input-section').classList.add('hidden');
+                            document.getElementById('waiting-submission').classList.remove('hidden');
+                            document.getElementById('round-result').classList.add('hidden');
+                        } else {
+                            document.getElementById('input-section').classList.remove('hidden');
+                            document.getElementById('waiting-submission').classList.add('hidden');
+                            document.getElementById('round-result').classList.add('hidden');
+                            document.getElementById('error-msg').classList.add('hidden');
+                        }
+
+                        // Host evaluates inputs when both submit
+                        if (isHost && currentRoundData && currentRoundData.inputs && Object.keys(currentRoundData.inputs).length === 2 && !currentRoundData.completed) {
+                            evaluateMatchRound(myMatchKey, myMatch);
+                        }
+                    }
+
+                    // Host checks if all parallel matches in current stage are completed
+                    if (isHost) {
+                        checkStageCompletion(room);
                     }
                 }
             });
@@ -446,17 +454,28 @@
 
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 const room = snap.val();
-                const matchIdx = room.currentMatchIndex || 0;
-                db.ref(`rooms/${roomId}/matches/${matchIdx}/rounds/${room.round}/inputs/${playerId}`).set(word);
-                document.getElementById('word-input').value = '';
+                const activeMatches = room.activeMatches || {};
+                let myMatchKey = null;
+                for (const [key, match] of Object.entries(activeMatches)) {
+                    if (match.p1 === playerId || match.p2 === playerId) {
+                        myMatchKey = key;
+                        break;
+                    }
+                }
+
+                if (myMatchKey) {
+                    const match = activeMatches[myMatchKey];
+                    db.ref(`rooms/${roomId}/activeMatches/${myMatchKey}/rounds/${match.round}/inputs/${playerId}`).set(word);
+                    document.getElementById('word-input').value = '';
+                }
             });
         };
 
-        async function evaluateMatchRound(room, matchIdx, currentMatch) {
-            const currentRound = room.round;
-            const roundData = room.matches[matchIdx].rounds[currentRound];
-            const w1 = roundData.inputs[currentMatch.p1].toLowerCase();
-            const w2 = roundData.inputs[currentMatch.p2].toLowerCase();
+        async function evaluateMatchRound(matchKey, match) {
+            const currentRound = match.round;
+            const roundData = match.rounds[currentRound];
+            const w1 = roundData.inputs[match.p1].toLowerCase();
+            const w2 = roundData.inputs[match.p2].toLowerCase();
 
             let score = 10;
             let isExactMatch = (w1 === w2);
@@ -467,91 +486,117 @@
                 try {
                     const res = await fetch(`https://api.datamuse.com/words?rel_syn=${w1}&max=50`);
                     const syns = await res.json();
-                    const match = syns.find(s => s.word.toLowerCase() === w2);
-                    if (match) {
-                        score = Math.min(90, Math.max(40, match.score ? Math.floor(match.score / 20) : 60));
+                    const found = syns.find(s => s.word.toLowerCase() === w2);
+                    if (found) {
+                        score = Math.min(90, Math.max(40, found.score ? Math.floor(found.score / 20) : 60));
                     } else {
                         const res2 = await fetch(`https://api.datamuse.com/words?rel_trg=${w1}&max=50`);
                         const trgs = await res2.json();
-                        const match2 = trgs.find(s => s.word.toLowerCase() === w2);
-                        if (match2) score = 65;
+                        if (trgs.find(s => s.word.toLowerCase() === w2)) score = 65;
                     }
-                } catch (e) {
-                    score = 30;
-                }
+                } catch (e) { score = 30; }
             }
 
-            db.ref(`rooms/${roomId}/matches/${matchIdx}/rounds/${currentRound}`).update({
+            const isMatchComplete = isExactMatch;
+
+            db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).update({
                 score: score,
-                completed: true,
-                matchWon: isExactMatch
+                completed: true
             });
+
+            if (isMatchComplete) {
+                db.ref(`rooms/${roomId}/activeMatches/${matchKey}`).update({ status: 'completed' });
+                // Record completed match stats
+                db.ref(`rooms/${roomId}/completedResults/${matchKey}`).set({
+                    p1: match.p1,
+                    p2: match.p2,
+                    roundsTaken: currentRound,
+                    winningWord: roundData.inputs[match.p1]
+                });
+            }
         }
 
-        window.nextMatchOrRound = function() {
+        window.nextRoundInMatch = function() {
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 const room = snap.val();
-                const matchIdx = room.currentMatchIndex || 0;
-                const currentRound = room.round;
-                const roundData = room.matches[matchIdx].rounds[currentRound];
-                const inputs = Object.values(roundData.inputs);
-
-                const updatedUsedSeeds = [...(room.usedSeeds || []), inputs[0].toUpperCase(), inputs[1].toUpperCase()];
-
-                if (roundData.matchWon) {
-                    // Save match result stats (rounds taken for this pairing)
-                    db.ref(`rooms/${roomId}/matchResults/${matchIdx}`).set({
-                        p1: room.matchups[matchIdx].p1,
-                        p2: room.matchups[matchIdx].p2,
-                        roundsTaken: currentRound,
-                        winningWord: inputs[0]
-                    });
-
-                    // Move to next match or finish
-                    const nextMatchIdx = matchIdx + 1;
-                    if (nextMatchIdx >= room.matchups.length) {
-                        db.ref('rooms/' + roomId).update({ status: 'finished' });
-                    } else {
-                        const nextSeed = starterSeeds[Math.floor(Math.random() * starterSeeds.length)];
-                        db.ref('rooms/' + roomId).update({
-                            currentMatchIndex: nextMatchIdx,
-                            round: 1,
-                            seed: nextSeed,
-                            usedSeeds: updatedUsedSeeds,
-                            history: ""
-                        });
+                const activeMatches = room.activeMatches || {};
+                let myMatchKey = null;
+                for (const [key, match] of Object.entries(activeMatches)) {
+                    if (match.p1 === playerId || match.p2 === playerId) {
+                        myMatchKey = key;
+                        break;
                     }
-                } else {
-                    // Continue current match to next round
+                }
+
+                if (myMatchKey) {
+                    const match = activeMatches[myMatchKey];
+                    const currentRound = match.round;
+                    const roundData = match.rounds[currentRound];
+                    const inputs = Object.values(roundData.inputs);
+
                     const nextSeed = `${inputs[0]} + ${inputs[1]}`;
-                    db.ref('rooms/' + roomId).update({
+                    const updatedUsed = [...(match.usedSeeds || []), inputs[0].toUpperCase(), inputs[1].toUpperCase()];
+
+                    db.ref(`rooms/${roomId}/activeMatches/${myMatchKey}`).update({
                         round: currentRound + 1,
                         seed: nextSeed,
-                        usedSeeds: updatedUsedSeeds,
+                        usedSeeds: updatedUsed,
                         history: `${inputs[0]} & ${inputs[1]} (R${currentRound})`
                     });
                 }
             });
         };
 
+        function checkStageCompletion(room) {
+            const activeMatches = Object.values(room.activeMatches || {});
+            const allDone = activeMatches.length > 0 && activeMatches.every(m => m.status === 'completed');
+
+            if (allDone) {
+                const nextStageIdx = (room.currentStageIndex || 0) + 1;
+                const stages = room.stages || [];
+
+                if (nextStageIdx >= stages.length) {
+                    db.ref('rooms/' + roomId).update({ status: 'finished' });
+                } else {
+                    const nextStageMatches = {};
+                    stages[nextStageIdx].forEach(m => {
+                        const seed = starterSeeds[Math.floor(Math.random() * starterSeeds.length)];
+                        nextStageMatches[m.matchKey] = {
+                            p1: m.p1,
+                            p2: m.p2,
+                            round: 1,
+                            seed: seed,
+                            usedSeeds: [seed],
+                            status: 'playing'
+                        };
+                    });
+
+                    db.ref('rooms/' + roomId).update({
+                        currentStageIndex: nextStageIdx,
+                        activeMatches: nextStageMatches
+                    });
+                }
+            }
+        }
+
         function renderPodium(room) {
-            const results = Object.values(room.matchResults || {});
+            const results = Object.values(room.completedResults || {});
             const players = room.players || {};
 
             if (results.length === 0) {
-                document.getElementById('podium-fewest-rounds').innerText = 'No matches completed';
+                document.getElementById('podium-fewest-rounds').innerText = 'No matches recorded';
                 document.getElementById('podium-ultimate-syncer').innerText = 'N/A';
                 return;
             }
 
-            // Category 1: Couple with least number of rounds in a single match
+            // Category 1: Couple with least number of rounds in a match
             results.sort((a, b) => a.roundsTaken - b.roundsTaken);
-            const bestCoupleMatch = results[0];
-            const pA = players[bestCoupleMatch.p1]?.name || 'P1';
-            const pB = players[bestCoupleMatch.p2]?.name || 'P2';
-            document.getElementById('podium-fewest-rounds').innerHTML = `${pA} & ${pB} — <b class="text-amber-300">${bestCoupleMatch.roundsTaken} rounds</b> (${bestCoupleMatch.winningWord})`;
+            const bestCouple = results[0];
+            const pA = players[bestCouple.p1]?.name || 'P1';
+            const pB = players[bestCouple.p2]?.name || 'P2';
+            document.getElementById('podium-fewest-rounds').innerHTML = `${pA} & ${pB} — <b class="text-amber-300">${bestCouple.roundsTaken} rounds</b> (${bestCouple.winningWord})`;
 
-            // Category 2: Ultimate Mind Reader (Least sum of rounds across all their matches)
+            // Category 2: Ultimate Mind Reader (Least sum of rounds)
             const playerTotals = {};
             results.forEach(res => {
                 [res.p1, res.p2].forEach(pId => {
