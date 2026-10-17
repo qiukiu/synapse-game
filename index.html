@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synapse - Player-Generated Seeds</title>
+    <title>Synapse - Fixed Parallel Tournament</title>
     <!-- Firebase App & Database SDKs (v9 Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -185,6 +185,7 @@
         let playerId = 'p_' + Math.random().toString(36).substr(2, 6);
         let playerName = '';
         let isHost = false;
+        let isEvaluating = false;
         let currentForbiddenWords = [];
 
         // --- NATIVE AUDIO SYNTHESIS JUICE ---
@@ -342,7 +343,6 @@
         function initializeStageMatches(rId, stages, stageIdx) {
             const initialStageMatches = {};
             stages[stageIdx].forEach(m => {
-                // Round 1 starts with NO preset seed word (player-generated)
                 initialStageMatches[m.matchKey] = {
                     p1: m.p1,
                     p2: m.p2,
@@ -430,7 +430,6 @@
                         document.getElementById('round-num').innerText = myMatch.round;
                         currentForbiddenWords = myMatch.usedSeeds || [];
 
-                        // UI adjustment for Round 1 (Player-generated seed) vs Round 2+
                         const seedEl = document.getElementById('seed-word');
                         const seedTitleEl = document.getElementById('seed-title');
                         const instructionEl = document.getElementById('input-instruction');
@@ -456,7 +455,8 @@
                         const inputsCount = currentRoundData && currentRoundData.inputs ? Object.keys(currentRoundData.inputs).length : 0;
                         const mySubmission = currentRoundData && currentRoundData.inputs ? currentRoundData.inputs[playerId] : null;
 
-                        if (inputsCount === 2 && !currentRoundData.completed) {
+                        // Robust evaluation trigger checking both players' submissions
+                        if (inputsCount === 2 && !currentRoundData.completed && !isEvaluating) {
                             evaluateMatchRound(myMatchKey, myMatch);
                         }
 
@@ -500,6 +500,10 @@
                             document.getElementById('error-msg').classList.add('hidden');
                         }
                     }
+
+                    if (isHost) {
+                        checkStageCompletion(room);
+                    }
                 }
             });
         }
@@ -538,32 +542,43 @@
         };
 
         async function evaluateMatchRound(matchKey, match) {
+            isEvaluating = true;
             const currentRound = match.round;
             const roundData = match.rounds[currentRound];
-            if (!roundData || roundData.completed) return;
+            if (!roundData || roundData.completed) {
+                isEvaluating = false;
+                return;
+            }
 
-            const inputs = Object.values(roundData.inputs || {});
-            if (inputs.length < 2) return;
+            const inputs = roundData.inputs || {};
+            const p1Input = inputs[match.p1];
+            const p2Input = inputs[match.p2];
 
-            const w1 = inputs[0].toLowerCase();
-            const w2 = inputs[1].toLowerCase();
+            if (!p1Input || !p2Input) {
+                isEvaluating = false;
+                return;
+            }
 
-            // Special logic for Round 1: Player-generated inputs become the seed for Round 2!
+            const w1 = p1Input.toLowerCase();
+            const w2 = p2Input.toLowerCase();
+
+            // Round 1: Player-generated seeds setup
             if (currentRound === 1 && !match.seed) {
-                const generatedSeed = `${inputs[0].toUpperCase()} + ${inputs[1].toUpperCase()}`;
-                const updatedUsed = [...(match.usedSeeds || []), inputs[0].toUpperCase(), inputs[1].toUpperCase()];
+                const generatedSeed = `${p1Input.toUpperCase()} + ${p2Input.toUpperCase()}`;
+                const updatedUsed = [...(match.usedSeeds || []), p1Input.toUpperCase(), p2Input.toUpperCase()];
 
-                db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).update({
-                    score: 50, // neutral starting score for generating seeds
+                await db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).update({
+                    score: 50,
                     completed: true
                 });
 
-                db.ref(`rooms/${roomId}/activeMatches/${matchKey}`).update({
+                await db.ref(`rooms/${roomId}/activeMatches/${matchKey}`).update({
                     round: 2,
                     seed: generatedSeed,
                     usedSeeds: updatedUsed,
                     history: `Generated Seed from Round 1`
                 });
+                isEvaluating = false;
                 return;
             }
 
@@ -588,20 +603,21 @@
                 } catch (e) { score = 30; }
             }
 
-            db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).update({
+            await db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).update({
                 score: score,
                 completed: true
             });
 
             if (isExactMatch) {
-                db.ref(`rooms/${roomId}/activeMatches/${matchKey}`).update({ status: 'completed' });
-                db.ref(`rooms/${roomId}/completedResults/${matchKey}`).set({
+                await db.ref(`rooms/${roomId}/activeMatches/${matchKey}`).update({ status: 'completed' });
+                await db.ref(`rooms/${roomId}/completedResults/${matchKey}`).set({
                     p1: match.p1,
                     p2: match.p2,
                     roundsTaken: currentRound,
-                    winningWord: inputs[0].toUpperCase()
+                    winningWord: p1Input.toUpperCase()
                 });
             }
+            isEvaluating = false;
         }
 
         window.nextRoundInMatch = function() {
@@ -621,16 +637,17 @@
                     const match = activeMatches[myMatchKey];
                     const currentRound = match.round;
                     const roundData = match.rounds[currentRound];
-                    const inputs = Object.values(roundData.inputs);
+                    const p1Input = roundData.inputs[match.p1];
+                    const p2Input = roundData.inputs[match.p2];
 
-                    const nextSeed = `${inputs[0]} + ${inputs[1]}`;
-                    const updatedUsed = [...(match.usedSeeds || []), inputs[0].toUpperCase(), inputs[1].toUpperCase()];
+                    const nextSeed = `${p1Input} + ${p2Input}`;
+                    const updatedUsed = [...(match.usedSeeds || []), p1Input.toUpperCase(), p2Input.toUpperCase()];
 
                     db.ref(`rooms/${roomId}/activeMatches/${myMatchKey}`).update({
                         round: currentRound + 1,
                         seed: nextSeed,
                         usedSeeds: updatedUsed,
-                        history: `${inputs[0]} & ${inputs[1]} (R${currentRound})`
+                        history: `${p1Input} & ${p2Input} (R${currentRound})`
                     });
                 }
             });
@@ -645,6 +662,37 @@
                 initializeStageMatches(roomId, stages, 0);
             });
         };
+
+        function checkStageCompletion(room) {
+            const activeMatches = Object.values(room.activeMatches || {});
+            const allDone = activeMatches.length > 0 && activeMatches.every(m => m.status === 'completed');
+
+            if (allDone) {
+                const nextStageIdx = (room.currentStageIndex || 0) + 1;
+                const stages = room.stages || [];
+
+                if (nextStageIdx >= stages.length) {
+                    db.ref('rooms/' + roomId).update({ status: 'finished' });
+                } else {
+                    const nextStageMatches = {};
+                    stages[nextStageIdx].forEach(m => {
+                        nextStageMatches[m.matchKey] = {
+                            p1: m.p1,
+                            p2: m.p2,
+                            round: 1,
+                            seed: null,
+                            usedSeeds: [],
+                            status: 'playing'
+                        };
+                    });
+
+                    db.ref('rooms/' + roomId).update({
+                        currentStageIndex: nextStageIdx,
+                        activeMatches: nextStageMatches
+                    });
+                }
+            }
+        }
 
         function renderPodium(room) {
             const results = Object.values(room.completedResults || {});
