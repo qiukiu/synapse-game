@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synapse - Parallel Tournament</title>
+    <title>Synapse - Polished Parallel Tournament</title>
     <!-- Firebase App & Database SDKs (v9 Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -13,13 +13,15 @@
         body { background: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .temp-bar { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes pulse-glow { 0%, 100% { filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.5)); } 50% { filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.9)); } }
+        .glow { animation: pulse-glow 1.5s infinite; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
 
     <div class="w-full max-w-md glass rounded-2xl p-6 shadow-2xl relative overflow-hidden">
         <h1 class="text-3xl font-extrabold text-center tracking-tight mb-2 bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent">SYNAPSE</h1>
-        <p class="text-xs text-slate-400 text-center mb-6">Independent Parallel Tournament</p>
+        <p class="text-xs text-slate-400 text-center mb-6">Polished Parallel Tournament Edition</p>
 
         <!-- SETUP SCREEN -->
         <div id="screen-setup" class="space-y-4">
@@ -44,10 +46,16 @@
         </div>
 
         <!-- LOBBY SCREEN -->
-        <div id="screen-lobby" class="hidden space-y-6 text-center">
+        <div id="screen-lobby" class="hidden space-y-5 text-center">
             <div id="room-badge" class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
                 <span class="text-xs text-slate-400 block uppercase tracking-wider">Room Code (<span id="room-type-label">Private</span>)</span>
                 <span id="lobby-code-display" class="text-3xl font-black tracking-widest text-indigo-400">------</span>
+            </div>
+
+            <!-- Custom Seed Option for Host -->
+            <div id="host-seed-box" class="hidden bg-slate-800/40 p-3 rounded-xl border border-slate-700 text-left space-y-1">
+                <label class="block text-xs uppercase tracking-wider text-slate-400">Custom Seed Words (Optional, comma-separated)</label>
+                <input id="custom-seeds-input" type="text" placeholder="e.g. CYBER, NEON, MATRIX, QUANTUM" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
             </div>
             
             <div>
@@ -142,7 +150,7 @@
             <!-- TOURNAMENT COMPLETE SCREEN -->
             <div id="tournament-complete" class="hidden space-y-4 pt-2 text-center">
                 <div class="bg-gradient-to-b from-indigo-950/90 to-slate-900 p-6 rounded-xl space-y-4 border border-emerald-500/50 shadow-xl">
-                    <div class="text-4xl">🏆</div>
+                    <div class="text-4xl animate-bounce">🏆</div>
                     <h2 class="text-2xl font-black text-emerald-400 uppercase tracking-wide">Tournament Complete!</h2>
                     
                     <div class="space-y-3 text-left">
@@ -156,7 +164,10 @@
                         </div>
                     </div>
                 </div>
-                <button onclick="location.reload()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition">Play Again</button>
+                <div class="space-y-2">
+                    <button id="rematch-btn" onclick="triggerRematch()" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">Rematch (Keep Players)</button>
+                    <button onclick="location.reload()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition">Leave to Main Menu</button>
+                </div>
             </div>
         </div>
     </div>
@@ -181,8 +192,43 @@
         let playerName = '';
         let isHost = false;
         let currentForbiddenWords = [];
+        let defaultStarterSeeds = ["SUN", "OCEAN", "MUSIC", "NIGHT", "FIRE", "SPACE", "COFFEE", "DREAM"];
 
-        const starterSeeds = ["SUN", "OCEAN", "MUSIC", "NIGHT", "FIRE", "SPACE", "COFFEE", "DREAM"];
+        // --- NATIVE AUDIO SYNTHESIS JUICE ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            if (type === 'click') {
+                osc.frequency.setValueAtTime(400, now);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'submit') {
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'sync') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+        }
 
         function showScreen(id) {
             ['screen-setup', 'screen-lobby', 'screen-game'].forEach(s => document.getElementById(s).classList.add('hidden'));
@@ -190,6 +236,7 @@
         }
 
         window.hostRoom = function(type) {
+            playSound('click');
             playerName = document.getElementById('player-name').value.trim();
             if (!playerName) return alert('Enter a name');
 
@@ -200,15 +247,18 @@
                 status: 'lobby',
                 type: type,
                 currentStageIndex: 0,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
                 players: { [playerId]: { name: playerName, host: true } }
             }).then(() => {
                 listenToRoom();
                 showScreen('screen-lobby');
                 document.getElementById('room-type-label').innerText = type === 'public' ? 'Public' : 'Private';
+                document.getElementById('host-seed-box').classList.remove('hidden');
             });
         };
 
         window.joinPrivateRoom = function() {
+            playSound('click');
             playerName = document.getElementById('player-name').value.trim();
             const code = document.getElementById('room-code-input').value.trim().toUpperCase();
             if (!playerName || !code) return alert('Enter name and code');
@@ -218,6 +268,7 @@
         };
 
         window.joinPublicRoom = function() {
+            playSound('click');
             playerName = document.getElementById('player-name').value.trim();
             if (!playerName) return alert('Enter a name');
 
@@ -226,6 +277,8 @@
                 let foundRoomId = null;
 
                 for (const [rId, rData] of Object.entries(rooms)) {
+                    // Ignore stale rooms older than 24h
+                    if (rData.createdAt && (Date.now() - rData.createdAt > 86400000)) continue;
                     if (rData.status === 'lobby' && rData.type === 'public') {
                         const count = Object.keys(rData.players || {}).length;
                         if (count < 8) {
@@ -257,6 +310,7 @@
                     listenToRoom();
                     showScreen('screen-lobby');
                     document.getElementById('room-type-label').innerText = room.type === 'public' ? 'Public' : 'Private';
+                    document.getElementById('host-seed-box').classList.add('hidden'); // Only host configures seeds
                 });
             });
         }
@@ -284,20 +338,31 @@
         }
 
         window.startParallelTournament = function() {
+            playSound('click');
+            // Get custom seeds if host specified them
+            const customInput = document.getElementById('custom-seeds-input').value.trim();
+            let seeds = defaultStarterSeeds;
+            if (customInput) {
+                seeds = customInput.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+                if (seeds.length === 0) seeds = defaultStarterSeeds;
+            }
+
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 const room = snap.val();
                 const pIds = Object.keys(room.players || {});
                 if (pIds.length < 2) return alert('Need at least 2 players!');
 
                 const stages = generateParallelStages(pIds);
-                initializeStageMatches(roomId, stages, 0);
+                db.ref('rooms/' + roomId).update({ seedPool: seeds }).then(() => {
+                    initializeStageMatches(roomId, stages, 0, seeds);
+                });
             });
         };
 
-        function initializeStageMatches(rId, stages, stageIdx) {
+        function initializeStageMatches(rId, stages, stageIdx, seeds) {
             const initialStageMatches = {};
             stages[stageIdx].forEach(m => {
-                const seed = starterSeeds[Math.floor(Math.random() * starterSeeds.length)];
+                const seed = seeds[Math.floor(Math.random() * seeds.length)];
                 initialStageMatches[m.matchKey] = {
                     p1: m.p1,
                     p2: m.p2,
@@ -312,7 +377,8 @@
                 status: 'playing',
                 stages: stages,
                 currentStageIndex: stageIdx,
-                activeMatches: initialStageMatches
+                activeMatches: initialStageMatches,
+                completedResults: null // reset results for rematch
             });
         }
 
@@ -345,9 +411,14 @@
                         document.getElementById('round-result').classList.add('hidden');
                         document.getElementById('tournament-complete').classList.remove('hidden');
                         renderPodium(room);
+                        
+                        if (isHost) {
+                            document.getElementById('rematch-btn').classList.remove('hidden');
+                        }
                         return;
                     }
 
+                    document.getElementById('tournament-complete').classList.add('hidden');
                     const stageIdx = room.currentStageIndex || 0;
                     document.getElementById('stage-heading').innerText = `Tournament Stage ${stageIdx + 1} of ${room.stages ? room.stages.length : 1}`;
 
@@ -391,7 +462,6 @@
                         const inputsCount = currentRoundData && currentRoundData.inputs ? Object.keys(currentRoundData.inputs).length : 0;
                         const mySubmission = currentRoundData && currentRoundData.inputs ? currentRoundData.inputs[playerId] : null;
 
-                        // Trigger evaluation as soon as both clients submit (handled by any client or host)
                         if (inputsCount === 2 && !currentRoundData.completed) {
                             evaluateMatchRound(myMatchKey, myMatch);
                         }
@@ -408,7 +478,14 @@
 
                             const score = currentRoundData.score;
                             document.getElementById('temp-val').innerText = score + '°';
-                            document.getElementById('temp-bar').style.width = score + '%';
+                            const tempBar = document.getElementById('temp-bar');
+                            tempBar.style.width = score + '%';
+                            if (score >= 80) {
+                                tempBar.classList.add('glow');
+                            } else {
+                                tempBar.classList.remove('glow');
+                            }
+
                             document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match Found!' : score > 50 ? '⚡ Warm Sync!' : '❄️ Freezing Connection';
 
                             if (myMatch.status === 'completed') {
@@ -438,6 +515,7 @@
         }
 
         window.submitWord = function() {
+            playSound('submit');
             const errEl = document.getElementById('error-msg');
             errEl.classList.add('hidden');
 
@@ -485,6 +563,7 @@
 
             if (isExactMatch) {
                 score = 100;
+                playSound('sync');
             } else {
                 try {
                     const res = await fetch(`https://api.datamuse.com/words?rel_syn=${w1}&max=50`);
@@ -517,6 +596,7 @@
         }
 
         window.nextRoundInMatch = function() {
+            playSound('click');
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 const room = snap.val();
                 const activeMatches = room.activeMatches || {};
@@ -554,13 +634,14 @@
             if (allDone) {
                 const nextStageIdx = (room.currentStageIndex || 0) + 1;
                 const stages = room.stages || [];
+                const seeds = room.seedPool || defaultStarterSeeds;
 
                 if (nextStageIdx >= stages.length) {
                     db.ref('rooms/' + roomId).update({ status: 'finished' });
                 } else {
                     const nextStageMatches = {};
                     stages[nextStageIdx].forEach(m => {
-                        const seed = starterSeeds[Math.floor(Math.random() * starterSeeds.length)];
+                        const seed = seeds[Math.floor(Math.random() * seeds.length)];
                         nextStageMatches[m.matchKey] = {
                             p1: m.p1,
                             p2: m.p2,
@@ -578,6 +659,17 @@
                 }
             }
         }
+
+        window.triggerRematch = function() {
+            playSound('click');
+            db.ref('rooms/' + roomId).once('value').then(snap => {
+                const room = snap.val();
+                const pIds = Object.keys(room.players || {});
+                const stages = generateParallelStages(pIds);
+                const seeds = room.seedPool || defaultStarterSeeds;
+                initializeStageMatches(roomId, stages, 0, seeds);
+            });
+        };
 
         function renderPodium(room) {
             const results = Object.values(room.completedResults || {});
