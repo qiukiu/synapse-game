@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synapse - Permainan Hubungan Kata</title>
+    <title>Synapse - Permainan Asosiasi Kata</title>
     <!-- Firebase App & Database SDKs (v9 Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -19,7 +19,7 @@
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
 
-    <!-- MAIN APP CONTAINER -->
+    <!-- UTAMA CONTAINER -->
     <div id="main-card" class="w-full max-w-md glass rounded-2xl p-6 shadow-2xl relative overflow-hidden transition-all duration-500">
         <h1 class="text-3xl font-extrabold text-center tracking-tight mb-2 bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent">SYNAPSE</h1>
         <p class="text-xs text-slate-400 text-center mb-6">Permainan Sync Pikiran & Asosiasi Kata</p>
@@ -66,7 +66,7 @@
             </div>
 
             <div id="host-controls" class="hidden">
-                <button id="start-btn" onclick="startParallelTournament()" disabled class="w-full bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg">Mulai Turnamen Paralel</button>
+                <button id="start-btn" onclick="startParallelTournament()" disabled class="w-full bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg">Mulai Permainan</button>
             </div>
             <p id="waiting-msg" class="text-xs text-slate-400">Menunggu Host memulai permainan...</p>
         </div>
@@ -75,7 +75,7 @@
         <div id="screen-game" class="hidden space-y-5">
             <!-- Header Pertandingan -->
             <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700 text-center space-y-1">
-                <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider" id="stage-heading">Tahap Turnamen 1</span>
+                <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider" id="stage-heading">Tahap Permainan 1</span>
                 <div class="text-sm font-bold text-white flex justify-center items-center gap-2">
                     <span id="match-p1" class="text-cyan-300">---</span>
                     <span class="text-xs text-slate-400 uppercase">vs</span>
@@ -110,7 +110,7 @@
 
             <div id="bye-player-box" class="hidden text-center py-6 bg-slate-800/40 rounded-xl border border-slate-700">
                 <p class="text-xs text-amber-400 font-medium uppercase tracking-wider">Anda Mendapat 'BYE' (Istirahat)</p>
-                <p class="text-xs text-slate-400 mt-1">Pemain lain sedang bertanding di tahap ini...</p>
+                <p class="text-xs text-slate-400 mt-1">Pemain lain sedang bermain di tahap ini...</p>
             </div>
 
             <!-- Tampilan Hasil Ronde -->
@@ -149,11 +149,11 @@
                 </div>
             </div>
 
-            <!-- LAYAR SELESAI TURNAMEN -->
+            <!-- LAYAR SELESAI PERMAINAN -->
             <div id="tournament-complete" class="hidden space-y-4 pt-2 text-center">
                 <div class="bg-gradient-to-b from-indigo-950/90 to-slate-900 p-6 rounded-xl space-y-4 border border-emerald-500/50 shadow-xl">
                     <div class="text-4xl animate-bounce">🏆</div>
-                    <h2 class="text-2xl font-black text-emerald-400 uppercase tracking-wide">Turnamen Selesai!</h2>
+                    <h2 class="text-2xl font-black text-emerald-400 uppercase tracking-wide">Permainan Selesai!</h2>
                     
                     <div class="space-y-3 text-left">
                         <div class="bg-slate-800/80 p-3 rounded-lg border border-indigo-500/40">
@@ -179,7 +179,7 @@
         <div class="flex justify-between items-center bg-slate-800/80 p-6 rounded-2xl border border-indigo-500/30 shadow-2xl">
             <div>
                 <h1 class="text-4xl font-black tracking-tight bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent">SYNAPSE TV</h1>
-                <p class="text-sm text-slate-400 mt-1">Layar Pertandingan & Live Score</p>
+                <p class="text-sm text-slate-400 mt-1">Layar Permainan & Live Score</p>
             </div>
             <div class="text-right">
                 <span class="text-xs text-slate-400 uppercase block tracking-wider">Kode Ruang</span>
@@ -197,10 +197,10 @@
         <!-- LEADERBOARD REALTIME TV -->
         <div class="bg-slate-800/80 p-6 rounded-2xl border border-slate-700 space-y-4 shadow-xl">
             <h3 class="text-lg font-bold text-emerald-400 flex items-center gap-2">
-                <span>🏆</span> Klasemen Turnamen Sementara
+                <span>🏆</span> Klasemen Permainan Sementara
             </h3>
             <div id="tv-leaderboard" class="space-y-2 text-sm">
-                <p class="text-slate-500 italic">Belum ada pertandingan selesai...</p>
+                <p class="text-slate-500 italic">Belum ada permainan selesai...</p>
             </div>
         </div>
     </div>
@@ -280,7 +280,6 @@
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 if (!snap.exists()) return alert('Ruangan tidak ditemukan!');
                 
-                // Expand container for widescreen TV layout
                 const mainCard = document.getElementById('main-card');
                 mainCard.classList.remove('max-w-md');
                 mainCard.classList.add('max-w-6xl');
@@ -309,7 +308,7 @@
 
                 if (room.status === 'playing') {
                     const stageIdx = (room.currentStageIndex || 0) + 1;
-                    statusBar.innerText = `Tahap Turnamen ${stageIdx} sedang Berlangsung 🔥`;
+                    statusBar.innerText = `Tahap Permainan ${stageIdx} sedang Berlangsung 🔥`;
 
                     gridEl.innerHTML = Object.entries(activeMatches).map(([key, match]) => {
                         const p1Name = playersObj[match.p1]?.name || 'P1';
@@ -354,7 +353,7 @@
                 }
 
                 if (room.status === 'finished') {
-                    statusBar.innerText = `🏆 Turnamen Selesai! Selamat untuk para pemenang!`;
+                    statusBar.innerText = `🏆 Permainan Selesai! Selamat untuk para pemenang!`;
                 }
 
                 renderPodium(room);
@@ -472,7 +471,7 @@
             });
         };
 
-        function initializeStageMatches(rId, stages, stageIdx) {
+        async function initializeStageMatches(rId, stages, stageIdx) {
             const initialStageMatches = {};
             stages[stageIdx].forEach(m => {
                 initialStageMatches[m.matchKey] = {
@@ -485,12 +484,16 @@
                 };
             });
 
-            db.ref('rooms/' + rId).update({
+            // BERSIHKAN DATA PERTANDINGAN LAMA SECARA TOTAL
+            await db.ref(`rooms/${rId}/activeMatches`).remove();
+            await db.ref(`rooms/${rId}/completedResults`).remove();
+            await db.ref(`rooms/${rId}/matches`).remove();
+
+            await db.ref('rooms/' + rId).update({
                 status: 'playing',
                 stages: stages,
                 currentStageIndex: stageIdx,
-                activeMatches: initialStageMatches,
-                completedResults: null
+                activeMatches: initialStageMatches
             });
         }
 
@@ -532,7 +535,7 @@
 
                     document.getElementById('tournament-complete').classList.add('hidden');
                     const stageIdx = room.currentStageIndex || 0;
-                    document.getElementById('stage-heading').innerText = `Tahap Turnamen ${stageIdx + 1} dari ${room.stages ? room.stages.length : 1}`;
+                    document.getElementById('stage-heading').innerText = `Tahap Permainan ${stageIdx + 1} dari ${room.stages ? room.stages.length : 1}`;
 
                     const activeMatches = room.activeMatches || {};
                     let myMatchKey = null;
@@ -843,9 +846,9 @@
             const container = isTVMode ? document.getElementById('tv-leaderboard') : null;
 
             if (results.length === 0) {
-                document.getElementById('podium-fewest-rounds').innerText = 'Belum ada pertandingan tercatat';
+                document.getElementById('podium-fewest-rounds').innerText = 'Belum ada permainan tercatat';
                 document.getElementById('podium-ultimate-syncer').innerText = 'N/A';
-                if (container) container.innerHTML = `<p class="text-slate-500 italic">Belum ada pertandingan selesai...</p>`;
+                if (container) container.innerHTML = `<p class="text-slate-500 italic">Belum ada permainan selesai...</p>`;
                 return;
             }
 
