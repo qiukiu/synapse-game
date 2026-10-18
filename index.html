@@ -61,12 +61,15 @@
             </div>
             
             <div>
-                <h3 class="text-sm font-medium text-slate-300 mb-2">Pemain Terhubung (<span id="player-count">1</span> Siap)</h3>
+                <h3 class="text-sm font-medium text-slate-300 mb-2">Pemain Terhubung</h3>
                 <div id="player-list" class="space-y-2"></div>
             </div>
 
-            <div id="host-controls" class="hidden">
-                <button id="start-btn" onclick="startParallelTournament()" disabled class="w-full bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg">Mulai Permainan</button>
+            <!-- TOMBOL SIAP (READY) -->
+            <button id="ready-btn" onclick="toggleReady()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg transition shadow-md">Tekan Jika Siap ✋</button>
+
+            <div id="host-controls" class="hidden pt-2 border-t border-slate-700">
+                <button id="start-btn" onclick="startParallelTournament()" disabled class="w-full bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg">Mulai Permainan (Semua Harus Siap)</button>
             </div>
             <p id="waiting-msg" class="text-xs text-slate-400">Menunggu Host memulai permainan...</p>
         </div>
@@ -140,12 +143,14 @@
                     </div>
                 </div>
 
-                <div id="match-won-banner" class="hidden bg-emerald-900/40 border border-emerald-500/50 p-3 rounded-xl text-center text-xs text-emerald-300 font-bold">
-                    🎉 Kata Sama Ditemukan! Menunggu meja lain selesai...
+                <!-- Tombol Lanjut Ronde Berikutnya (Menampilkan Suhu Lebih Lama) -->
+                <div id="next-round-btn-box" class="space-y-2">
+                    <button onclick="requestNextRound()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">Lanjut ke Ronde Berikutnya ➡️</button>
+                    <p id="waiting-next-round" class="text-center text-xs text-slate-400 hidden">Menunggu pasangan Anda menekan tombol lanjut...</p>
                 </div>
 
-                <div id="next-btn-box" class="hidden">
-                    <button onclick="nextRoundInMatch()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition">Lanjut ke Ronde Berikutnya</button>
+                <div id="match-won-banner" class="hidden bg-emerald-900/40 border border-emerald-500/50 p-3 rounded-xl text-center text-xs text-emerald-300 font-bold">
+                    🎉 Kata Sama Ditemukan! Pertandingan ini selesai. Menunggu meja lain...
                 </div>
             </div>
 
@@ -226,6 +231,7 @@
         let isHost = false;
         let isEvaluating = false;
         let isTVMode = false;
+        let isReady = false;
         let currentForbiddenWords = [];
 
         // --- EFEK SUARA NATIVE (WEB AUDIO API) ---
@@ -301,7 +307,7 @@
                 const statusBar = document.getElementById('tv-status-bar');
 
                 if (room.status === 'lobby') {
-                    statusBar.innerText = `Lobi Terbuka - ${Object.keys(playersObj).length} Pemain Siap`;
+                    statusBar.innerText = `Lobi Terbuka - Menunggu Pemain Menekan Tombol Siap`;
                     gridEl.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 bg-slate-900/40 rounded-xl border border-slate-800">Menunggu Host Memulai Permainan...</div>`;
                     return;
                 }
@@ -367,17 +373,21 @@
 
             roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
             isHost = true;
+            isReady = true; // Host otomatis siap
 
             db.ref('rooms/' + roomId).set({
                 status: 'lobby',
                 type: type,
                 currentStageIndex: 0,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
-                players: { [playerId]: { name: playerName, host: true } }
+                players: { 
+                    [playerId]: { name: playerName, host: true, ready: true } 
+                }
             }).then(() => {
                 listenToRoom();
                 showScreen('screen-lobby');
                 document.getElementById('room-type-label').innerText = type === 'public' ? 'Publik' : 'Privat';
+                document.getElementById('ready-btn').classList.add('hidden'); // Host tidak perlu tombol ready manual
             });
         };
 
@@ -426,16 +436,36 @@
                 const room = snapshot.val();
                 if (room.status !== 'lobby') return alert('Permainan sudah dimulai!');
 
+                isReady = false;
                 db.ref(`rooms/${roomId}/players/${playerId}`).set({
                     name: playerName,
-                    host: false
+                    host: false,
+                    ready: false
                 }).then(() => {
                     listenToRoom();
                     showScreen('screen-lobby');
                     document.getElementById('room-type-label').innerText = room.type === 'public' ? 'Publik' : 'Privat';
+                    document.getElementById('ready-btn').classList.remove('hidden');
+                    document.getElementById('ready-btn').innerText = "Tekan Jika Siap ✋";
+                    document.getElementById('ready-btn').className = "w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg transition shadow-md";
                 });
             });
         }
+
+        window.toggleReady = function() {
+            playSound('click');
+            isReady = !isReady;
+            db.ref(`rooms/${roomId}/players/${playerId}/ready`).set(isReady);
+
+            const btn = document.getElementById('ready-btn');
+            if (isReady) {
+                btn.innerText = "Batal Siap (Status: SIAP ✓)";
+                btn.className = "w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md";
+            } else {
+                btn.innerText = "Tekan Jika Siap ✋";
+                btn.className = "w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg transition shadow-md";
+            }
+        };
 
         function generateParallelStages(playerIds) {
             const pool = [...playerIds];
@@ -463,8 +493,14 @@
             playSound('click');
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 const room = snap.val();
-                const pIds = Object.keys(room.players || {});
+                const players = room.players || {};
+                const pIds = Object.keys(players);
+                
                 if (pIds.length < 2) return alert('Dibutuhkan minimal 2 pemain!');
+
+                // Validasi apakah semua pemain sudah siap
+                const allReady = Object.values(players).every(p => p.ready);
+                if (!allReady) return alert('Semua pemain harus menekan tombol Siap terlebih dahulu!');
 
                 const stages = generateParallelStages(pIds);
                 initializeStageMatches(roomId, stages, 0);
@@ -484,7 +520,6 @@
                 };
             });
 
-            // BERSIHKAN DATA PERTANDINGAN LAMA SECARA TOTAL
             await db.ref(`rooms/${rId}/activeMatches`).remove();
             await db.ref(`rooms/${rId}/completedResults`).remove();
             await db.ref(`rooms/${rId}/matches`).remove();
@@ -507,13 +542,21 @@
                 const playersObj = room.players || {};
                 const playersArr = Object.entries(playersObj);
                 document.getElementById('player-count').innerText = playersArr.length;
-                document.getElementById('player-list').innerHTML = playersArr.map(([id, p]) => 
-                    `<div class="bg-slate-800 p-2 rounded text-sm font-medium flex justify-between"><span>${p.name}</span> <span class="text-xs text-indigo-400">${p.host ? 'Host' : 'Pemain'}</span></div>`
-                ).join('');
+                
+                // Render lobi pemain lengkap dengan indikator status siap
+                document.getElementById('player-list').innerHTML = playersArr.map(([id, p]) => `
+                    <div class="bg-slate-800 p-2.5 rounded text-sm font-medium flex justify-between items-center">
+                        <span>${p.name} ${p.host ? '<span class="text-xs text-indigo-400 font-bold ml-1">(Host)</span>' : ''}</span> 
+                        <span class="text-xs px-2 py-0.5 rounded font-bold ${p.ready ? 'bg-emerald-900/60 text-emerald-400 border border-emerald-500/40' : 'bg-amber-900/40 text-amber-400 border border-amber-500/30'}">
+                            ${p.ready ? 'SIAP ✓' : 'MENUNGGU...'}
+                        </span>
+                    </div>
+                `).join('');
 
                 if (isHost) {
                     document.getElementById('host-controls').classList.remove('hidden');
-                    document.getElementById('start-btn').disabled = playersArr.length < 2;
+                    const allReady = playersArr.length >= 2 && playersArr.every(([id, p]) => p.ready);
+                    document.getElementById('start-btn').disabled = !allReady;
                     document.getElementById('waiting-msg').classList.add('hidden');
                 }
 
@@ -616,12 +659,30 @@
 
                             document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match! Sempurna!' : score > 50 ? '⚡ Hangat & Berasosiasi!' : '❄️ Koneksi Masih Dingin';
 
+                            // Cek status tombol lanjut ronde berdasarkan voting kedua pemain
+                            const nextVotes = currentRoundData.nextVotes || {};
+                            const myVote = nextVotes[playerId];
+                            const votesCount = Object.keys(nextVotes).length;
+
                             if (myMatch.status === 'completed') {
                                 document.getElementById('match-won-banner').classList.remove('hidden');
-                                document.getElementById('next-btn-box').classList.add('hidden');
+                                document.getElementById('next-round-btn-box').classList.add('hidden');
                             } else {
                                 document.getElementById('match-won-banner').classList.add('hidden');
-                                document.getElementById('next-btn-box').classList.remove('hidden');
+                                document.getElementById('next-round-btn-box').classList.remove('hidden');
+                                
+                                const nextBtn = document.querySelector('#next-round-btn-box button');
+                                const waitingText = document.getElementById('waiting-next-round');
+
+                                if (myVote) {
+                                    nextBtn.classList.add('hidden');
+                                    waitingText.classList.remove('hidden');
+                                    waitingText.innerText = `Menunggu pasangan Anda menekan tombol lanjut... (${votesCount}/2 siap)`;
+                                } else {
+                                    nextBtn.classList.remove('hidden');
+                                    nextBtn.innerText = "Lanjut ke Ronde Berikutnya ➡️";
+                                    waitingText.classList.add('hidden');
+                                }
                             }
                         } else if (mySubmission) {
                             document.getElementById('input-section').classList.add('hidden');
@@ -765,7 +826,8 @@
             isEvaluating = false;
         }
 
-        window.nextRoundInMatch = function() {
+        // Tombol lanjut ronde dengan sistem vote (kedua pemain harus klik)
+        window.requestNextRound = function() {
             playSound('click');
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 const room = snap.val();
@@ -781,22 +843,38 @@
                 if (myMatchKey) {
                     const match = activeMatches[myMatchKey];
                     const currentRound = match.round;
-                    const roundData = match.rounds[currentRound];
-                    const p1Input = roundData.inputs[match.p1];
-                    const p2Input = roundData.inputs[match.p2];
-
-                    const nextSeed = `${p1Input} + ${p2Input}`;
-                    const updatedUsed = [...(match.usedSeeds || []), p1Input.toUpperCase(), p2Input.toUpperCase()];
-
-                    db.ref(`rooms/${roomId}/activeMatches/${myMatchKey}`).update({
-                        round: currentRound + 1,
-                        seed: nextSeed,
-                        usedSeeds: updatedUsed,
-                        history: `${p1Input} & ${p2Input} (R${currentRound})`
+                    
+                    // Daftarkan suara vote pemain ini ke database
+                    db.ref(`rooms/${roomId}/activeMatches/${myMatchKey}/rounds/${currentRound}/nextVotes/${playerId}`).set(true).then(() => {
+                        // Cek apakah kedua pemain sudah vote
+                        db.ref(`rooms/${roomId}/activeMatches/${myMatchKey}/rounds/${currentRound}/nextVotes`).once('value').then(voteSnap => {
+                            const votes = voteSnap.val() || {};
+                            if (Object.keys(votes).length >= 2) {
+                                executeNextRound(myMatchKey, match);
+                            }
+                        });
                     });
                 }
             });
         };
+
+        function executeNextRound(matchKey, match) {
+            const currentRound = match.round;
+            db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).once('value').then(snap => {
+                const roundData = snap.val();
+                const inputs = Object.values(roundData.inputs);
+
+                const nextSeed = `${inputs[0]} + ${inputs[1]}`;
+                const updatedUsed = [...(match.usedSeeds || []), inputs[0].toUpperCase(), inputs[1].toUpperCase()];
+
+                db.ref(`rooms/${roomId}/activeMatches/${matchKey}`).update({
+                    round: currentRound + 1,
+                    seed: nextSeed,
+                    usedSeeds: updatedUsed,
+                    history: `${inputs[0]} & ${inputs[1]} (R${currentRound})`
+                });
+            });
+        }
 
         window.triggerRematch = function() {
             playSound('click');
