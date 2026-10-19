@@ -122,7 +122,7 @@
                     <p id="input-instruction" class="text-xs text-slate-300 text-center">Ketik kata bebas untuk menentukan kata dasar ronde pertama!</p>
                     <input id="word-input" type="text" placeholder="Kata rahasia Anda..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-center text-lg text-white focus:outline-none focus:border-indigo-500 uppercase">
                     <p id="error-msg" class="text-xs text-red-400 text-center hidden font-medium"></p>
-                    <button onclick="submitWord()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-md">Kirim Jawaban</button>
+                    <button id="submit-btn" onclick="submitWord()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-md">Kirim Jawaban</button>
                 </div>
 
                 <div id="waiting-submission" class="hidden text-center py-4">
@@ -195,7 +195,7 @@
                             <span id="podium-fewest-rounds" class="text-sm font-bold text-white">---</span>
                         </div>
                         <div class="bg-slate-800/80 p-3 rounded-lg border border-emerald-500/40">
-                            <span class="text-xs text-emerald-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
+                            <span class="text-xs text-indigo-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
                             <span id="podium-ultimate-syncer" class="text-sm font-bold text-white">---</span>
                         </div>
                     </div>
@@ -250,7 +250,6 @@
   appId: "1:491116770518:web:72dfa149ef2aecb7358577",
   measurementId: "G-P3P2S6MFSZ"
 };
-
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -263,6 +262,7 @@
         let isReady = false;
         let countdownTimer = null;
         let currentForbiddenWords = [];
+        let isSubmitting = false; // Flag untuk mencegah double-press
 
         // --- EFEK SUARA NATIVE (WEB AUDIO API) ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -560,7 +560,7 @@
                 };
             });
 
-            await db.ref(`rooms/${rId}/activeMatches`).remove();
+            await db.ref(`rooms/${rR}/activeMatches`).remove();
             await db.ref(`rooms/${rId}/completedResults`).remove();
             await db.ref(`rooms/${rId}/matches`).remove();
 
@@ -592,7 +592,7 @@
                 document.getElementById('player-list').innerHTML = playersArr.map(([id, p]) => `
                     <div class="bg-slate-800 p-2.5 rounded text-sm font-medium flex justify-between items-center">
                         <span>${p.name} ${p.host ? '<span class="text-xs text-indigo-400 font-bold ml-1">(Host)</span>' : ''}</span> 
-                        <span class="text-xs px-2 py-0.5 rounded font-bold ${p.ready ? 'bg-emerald-900/60 text-emerald-400 border border-emerald-500/40' : 'bg-amber-900/40 text-amber-400 border border-amber-500/30'}">
+                        <span class="text-xs px-2 py-0.5 rounded font-bold ${p.ready ? 'bg-emerald-900/60 text-emerald-400 border border-emerald-500/40' : 'bg-amber-900/40 text-amber-400 border border-emerald-500/30'}">
                             ${p.ready ? 'SIAP ✓' : 'MENUNGGU...'}
                         </span>
                     </div>
@@ -719,7 +719,6 @@
                                 if (!revealCard.classList.contains('reveal-anim')) {
                                     revealCard.classList.add('reveal-anim');
                                     
-                                    // Efek suara dimainkan saat animasi reveal aktif
                                     if (score === 100) {
                                         playSound('sync');
                                     } else {
@@ -773,6 +772,12 @@
                             document.getElementById('countdown-box').classList.add('hidden');
                             document.getElementById('round-result').classList.add('hidden');
                         } else {
+                            // Reset tombol submit jika baru masuk ronde baru
+                            isSubmitting = false;
+                            const submitBtn = document.getElementById('submit-btn');
+                            submitBtn.disabled = false;
+                            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
                             document.getElementById('input-section').classList.remove('hidden');
                             document.getElementById('waiting-submission').classList.add('hidden');
                             document.getElementById('countdown-box').classList.add('hidden');
@@ -810,11 +815,12 @@
         }
 
         window.submitWord = function() {
-            playSound('submit');
+            if (isSubmitting) return; // Mencegah double click / submit ganda
+
+            const word = document.getElementById('word-input').value.trim().toUpperCase();
             const errEl = document.getElementById('error-msg');
             errEl.classList.add('hidden');
 
-            const word = document.getElementById('word-input').value.trim().toUpperCase();
             if (!word) return alert('Ketik sebuah kata!');
 
             if (currentForbiddenWords.includes(word)) {
@@ -822,6 +828,13 @@
                 errEl.classList.remove('hidden');
                 return;
             }
+
+            isSubmitting = true;
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            playSound('submit');
 
             db.ref('rooms/' + roomId).once('value').then(snap => {
                 const room = snap.val();
