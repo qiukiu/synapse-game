@@ -108,8 +108,8 @@
                 <div class="text-xs text-slate-400">Ronde <b id="round-num" class="text-indigo-400">1</b></div>
             </div>
 
-            <!-- Kotak Kata Target -->
-            <div class="bg-slate-800/80 p-4 rounded-xl text-center border border-indigo-500/30">
+            <!-- KOTAK KATA TARGET (COSMETIC BOX TERJAGA KONSISTEN) -->
+            <div id="seed-card-box" class="bg-slate-800/80 p-4 rounded-xl text-center border border-indigo-500/30 transition-all">
                 <span id="seed-title" class="text-xs text-slate-400 uppercase tracking-wider block mb-1">Konsep Target</span>
                 <div id="seed-word" class="text-2xl font-black text-indigo-300 uppercase tracking-wide">---</div>
                 
@@ -188,7 +188,7 @@
                     <p id="waiting-next-round" class="text-center text-xs text-slate-400 hidden">Menunggu pasangan Anda menekan tombol Siap...</p>
                 </div>
 
-                <!-- TOMBOL LIHAT HASIL AKHIR (JIKA SEMUA TAHAP SELESAI) -->
+                <!-- TOMBOL LIHAT HASIL AKHIR -->
                 <button id="see-results-btn" onclick="showSummaryScreen()" class="hidden w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg transition shadow-lg">
                     🏆 Lihat Hasil Akhir & Rangkuman
                 </button>
@@ -212,7 +212,6 @@
                     </div>
                 </div>
                 <div class="space-y-2">
-                    <!-- Tombol Main Lagi untuk Setiap Pemain -->
                     <button onclick="returnToLobby()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">
                         🔄 Main Lagi di Ruang Ini
                     </button>
@@ -385,7 +384,7 @@
                                     <span class="${inputsCount === 2 ? 'text-emerald-400' : 'text-slate-300'}">${p2Name} ${inputsCount === 2 ? '✓' : ''}</span>
                                 </div>
                                 <div class="text-xs text-slate-400">
-                                    Target: <b class="text-indigo-300 uppercase">${match.seed || '[Input Bebas Ronde 1]'}</b>
+                                    Target: <b class="text-indigo-300 uppercase">${match.seed || 'BEBAS (RONDE 1)'}</b>
                                 </div>
                                 ${roundData?.completed ? `
                                     <div class="space-y-1 pt-1">
@@ -679,9 +678,10 @@
                         const seedTitleEl = document.getElementById('seed-title');
                         const instructionEl = document.getElementById('input-instruction');
 
+                        // PERSIST KONTUSI KOTAK KOSMETIK UNTUK KATA TARGET
                         if (myMatch.round === 1 && !myMatch.seed) {
-                            seedTitleEl.innerText = "Tujuan Ronde 1";
-                            seedEl.innerText = "✍️ MASUKKAN KATA BEBAS ANDA";
+                            seedTitleEl.innerText = "Konsep Target";
+                            seedEl.innerText = "BEBAS (RONDE 1)";
                             instructionEl.innerText = "Ketik kata bebas. Kata Anda dan lawan akan digabung menjadi target di Ronde 2!";
                         } else {
                             seedTitleEl.innerText = "Konsep Target";
@@ -754,7 +754,6 @@
                                     document.getElementById('winning-word-display').innerText = currentRoundData.inputs[myMatch.p1];
                                     document.getElementById('next-round-btn-box').classList.add('hidden');
                                     
-                                    // Tampilkan tombol "Lihat Hasil Akhir" jika permainan telah selesai
                                     if (room.status === 'finished') {
                                         document.getElementById('see-results-btn').classList.remove('hidden');
                                     } else {
@@ -784,7 +783,6 @@
                             document.getElementById('countdown-box').classList.add('hidden');
                             document.getElementById('round-result').classList.add('hidden');
                         } else {
-                            // Reset flag & tombol untuk ronde baru
                             isSubmitting = false;
                             const submitBtn = document.getElementById('submit-btn');
                             submitBtn.disabled = false;
@@ -809,7 +807,6 @@
         function startCountdown(matchKey, roundNum) {
             if (countdownTimer && activeCountdownRound === roundNum) return;
             
-            // Clear timer lama jika berpindah ronde
             if (countdownTimer) {
                 clearInterval(countdownTimer);
                 countdownTimer = null;
@@ -906,36 +903,32 @@
             const raw1 = p1Input.trim().toLowerCase();
             const raw2 = p2Input.trim().toLowerCase();
 
-            // Evaluasi Ronde 1
-            if (currentRound === 1 && !match.seed) {
-                await db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).update({
-                    score: 50,
-                    completed: true
-                });
-                isEvaluating = false;
-                return;
-            }
-
             let score = 10;
             let isExactMatch = (raw1 === raw2);
 
-            if (isExactMatch) {
-                score = 100;
+            // Ronde 1 dihitung dengan alur normal
+            if (currentRound === 1 && !match.seed) {
+                if (isExactMatch) score = 100;
+                else score = 50;
             } else {
-                try {
-                    const [w1, w2] = await Promise.all([translateToEN(raw1), translateToEN(raw2)]);
+                if (isExactMatch) {
+                    score = 100;
+                } else {
+                    try {
+                        const [w1, w2] = await Promise.all([translateToEN(raw1), translateToEN(raw2)]);
 
-                    const res = await fetch(`https://api.datamuse.com/words?rel_syn=${w1}&max=50`);
-                    const syns = await res.json();
-                    const found = syns.find(s => s.word.toLowerCase() === w2);
-                    if (found) {
-                        score = Math.min(90, Math.max(40, found.score ? Math.floor(found.score / 20) : 60));
-                    } else {
-                        const res2 = await fetch(`https://api.datamuse.com/words?rel_trg=${w1}&max=50`);
-                        const trgs = await res2.json();
-                        if (trgs.find(s => s.word.toLowerCase() === w2)) score = 65;
-                    }
-                } catch (e) { score = 30; }
+                        const res = await fetch(`https://api.datamuse.com/words?rel_syn=${w1}&max=50`);
+                        const syns = await res.json();
+                        const found = syns.find(s => s.word.toLowerCase() === w2);
+                        if (found) {
+                            score = Math.min(90, Math.max(40, found.score ? Math.floor(found.score / 20) : 60));
+                        } else {
+                            const res2 = await fetch(`https://api.datamuse.com/words?rel_trg=${w1}&max=50`);
+                            const trgs = await res2.json();
+                            if (trgs.find(s => s.word.toLowerCase() === w2)) score = 65;
+                        }
+                    } catch (e) { score = 30; }
+                }
             }
 
             await db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).update({
@@ -1031,7 +1024,6 @@
                 status: 'lobby',
                 currentStageIndex: 0
             }).then(() => {
-                // Reset status ready semua pemain di database
                 db.ref(`rooms/${roomId}/players`).once('value').then(snap => {
                     const players = snap.val() || {};
                     const updates = {};
@@ -1083,52 +1075,3 @@
             if (results.length === 0) {
                 document.getElementById('podium-fewest-rounds').innerText = 'Belum ada permainan tercatat';
                 document.getElementById('podium-ultimate-syncer').innerText = 'N/A';
-                if (container) container.innerHTML = `<p class="text-slate-500 italic">Belum ada permainan selesai...</p>`;
-                return;
-            }
-
-            results.sort((a, b) => a.roundsTaken - b.roundsTaken);
-            const bestCouple = results[0];
-            const pA = players[bestCouple.p1]?.name || 'P1';
-            const pB = players[bestCouple.p2]?.name || 'P2';
-            const bestCoupleHTML = `${pA} & ${pB} — <b class="text-amber-300">${bestCouple.roundsTaken} ronde</b> (${bestCouple.winningWord})`;
-            
-            document.getElementById('podium-fewest-rounds').innerHTML = bestCoupleHTML;
-
-            const playerTotals = {};
-            results.forEach(res => {
-                [res.p1, res.p2].forEach(pId => {
-                    playerTotals[pId] = (playerTotals[pId] || 0) + res.roundsTaken;
-                });
-            });
-
-            let bestPlayerId = null;
-            let minSum = Infinity;
-            for (const [pId, sum] of Object.entries(playerTotals)) {
-                if (sum < minSum) {
-                    minSum = sum;
-                    bestPlayerId = pId;
-                }
-            }
-
-            const ultimateName = players[bestPlayerId]?.name || 'Pemain';
-            document.getElementById('podium-ultimate-syncer').innerHTML = `${ultimateName} — <b class="text-emerald-300">Total Sum: ${minSum} ronde</b>`;
-
-            if (container) {
-                container.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-slate-900/60 p-3 rounded-lg border border-indigo-500/30">
-                            <span class="text-xs text-indigo-300 font-bold block uppercase">👑 Pasangan Paling Sync</span>
-                            <span class="text-base font-bold text-white">${bestCoupleHTML}</span>
-                        </div>
-                        <div class="bg-slate-900/60 p-3 rounded-lg border border-emerald-500/30">
-                            <span class="text-xs text-emerald-300 font-bold block uppercase">🌟 Pembaca Pikiran Sejati</span>
-                            <span class="text-base font-bold text-white">${ultimateName} (${minSum} Total Ronde)</span>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-    </script>
-</body>
-</html>
