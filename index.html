@@ -705,7 +705,6 @@
                             document.getElementById('input-section').classList.add('hidden');
                             document.getElementById('waiting-submission').classList.add('hidden');
                             
-                            // Check if countdown trigger has been executed
                             if (!currentRoundData.revealed) {
                                 document.getElementById('countdown-box').classList.remove('hidden');
                                 document.getElementById('round-result').classList.add('hidden');
@@ -715,9 +714,17 @@
                                 document.getElementById('round-result').classList.remove('hidden');
 
                                 const revealCard = document.getElementById('reveal-card');
+                                const score = currentRoundData.score;
+
                                 if (!revealCard.classList.contains('reveal-anim')) {
                                     revealCard.classList.add('reveal-anim');
-                                    playSound('reveal');
+                                    
+                                    // Efek suara dimainkan saat animasi reveal aktif
+                                    if (score === 100) {
+                                        playSound('sync');
+                                    } else {
+                                        playSound('reveal');
+                                    }
                                 }
 
                                 document.getElementById('res-p1-label').innerText = p1Name;
@@ -725,7 +732,6 @@
                                 document.getElementById('res-p2-label').innerText = p2Name;
                                 document.getElementById('res-p2-val').innerText = currentRoundData.inputs[myMatch.p2];
 
-                                const score = currentRoundData.score;
                                 document.getElementById('temp-val').innerText = score + '°';
                                 const tempBar = document.getElementById('temp-bar');
                                 tempBar.style.width = score + '%';
@@ -891,7 +897,6 @@
 
             if (isExactMatch) {
                 score = 100;
-                playSound('sync');
             } else {
                 try {
                     const [w1, w2] = await Promise.all([translateToEN(raw1), translateToEN(raw2)]);
@@ -934,7 +939,6 @@
             readyBtn.disabled = true;
             notice.classList.remove('hidden');
 
-            // Cooldown delay before casting ready state
             setTimeout(() => {
                 readyBtn.disabled = false;
                 notice.classList.add('hidden');
