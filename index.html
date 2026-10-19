@@ -206,13 +206,13 @@
                             <span id="podium-fewest-rounds" class="text-sm font-bold text-white">---</span>
                         </div>
                         <div class="bg-slate-800/80 p-3 rounded-lg border border-emerald-500/40">
-                            <span class="text-xs text-emerald-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
+                            <span class="text-xs text-indigo-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
                             <span id="podium-ultimate-syncer" class="text-sm font-bold text-white">---</span>
                         </div>
                     </div>
                 </div>
                 <div class="space-y-2">
-                    <button onclick="returnToLobby()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">
+                    <button onclick="playAgainIndividual()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">
                         🔄 Main Lagi di Ruang Ini
                     </button>
                     <button onclick="location.reload()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition">
@@ -551,6 +551,12 @@
         };
 
         async function initializeStageMatches(rId, stages, stageIdx) {
+            activeCountdownRound = null;
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+
             const initialStageMatches = {};
             stages[stageIdx].forEach(m => {
                 initialStageMatches[m.matchKey] = {
@@ -563,6 +569,7 @@
                 };
             });
 
+            // Clean residue from previous games completely
             await db.ref(`rooms/${rId}/activeMatches`).remove();
             await db.ref(`rooms/${rId}/completedResults`).remove();
             await db.ref(`rooms/${rId}/matches`).remove();
@@ -635,7 +642,7 @@
                     } else {
                         document.getElementById('host-controls').classList.add('hidden');
                         document.getElementById('non-host-controls').classList.remove('hidden');
-                        document.getElementById('waiting-msg').classList.remove('hidden');
+                        document.getElementById('waiting-msg').classList.add('hidden');
                     }
                     return;
                 }
@@ -678,7 +685,7 @@
                         const seedTitleEl = document.getElementById('seed-title');
                         const instructionEl = document.getElementById('input-instruction');
 
-                        // PERSIST KONTUSI KOTAK KOSMETIK UNTUK KATA TARGET
+                        // PERSIST KOTAK KOSMETIK UNTUK KATA TARGET
                         if (myMatch.round === 1 && !myMatch.seed) {
                             seedTitleEl.innerText = "Konsep Target";
                             seedEl.innerText = "BEBAS (RONDE 1)";
@@ -906,7 +913,7 @@
             let score = 10;
             let isExactMatch = (raw1 === raw2);
 
-            // Ronde 1 dihitung dengan alur normal
+            // Evaluasi Ronde 1 dengan alur normal (support animasi & countdown)
             if (currentRound === 1 && !match.seed) {
                 if (isExactMatch) score = 100;
                 else score = 50;
@@ -1018,20 +1025,17 @@
             });
         };
 
-        window.returnToLobby = function() {
+        // Individual Play Again: allows each player to return to lobby independently at their own pace
+        window.playAgainIndividual = function() {
             playSound('click');
-            db.ref(`rooms/${roomId}`).update({
-                status: 'lobby',
-                currentStageIndex: 0
-            }).then(() => {
-                db.ref(`rooms/${roomId}/players`).once('value').then(snap => {
-                    const players = snap.val() || {};
-                    const updates = {};
-                    Object.keys(players).forEach(pId => {
-                        updates[`rooms/${roomId}/players/${pId}/ready`] = players[pId].host ? true : false;
-                    });
-                    db.ref().update(updates);
-                });
+            activeCountdownRound = null;
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+
+            db.ref(`rooms/${roomId}/players/${playerId}/ready`).set(false).then(() => {
+                showScreen('screen-lobby');
             });
         };
 
