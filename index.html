@@ -7,6 +7,8 @@
     <!-- Firebase App & Database SDKs (v9 Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <!-- File Konfigurasi Firebase Terpisah -->
+    <script src="firebase-config.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -195,7 +197,7 @@
                             <span id="podium-fewest-rounds" class="text-sm font-bold text-white">---</span>
                         </div>
                         <div class="bg-slate-800/80 p-3 rounded-lg border border-emerald-500/40">
-                            <span class="text-xs text-indigo-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
+                            <span class="text-xs text-emerald-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
                             <span id="podium-ultimate-syncer" class="text-sm font-bold text-white">---</span>
                         </div>
                     </div>
@@ -240,8 +242,6 @@
     </div>
 
     <script>
-        src="firebase-config.js"
-
         let roomId = null;
         let playerId = 'p_' + Math.random().toString(36).substr(2, 6);
         let playerName = '';
@@ -251,7 +251,7 @@
         let isReady = false;
         let countdownTimer = null;
         let currentForbiddenWords = [];
-        let isSubmitting = false; // Flag untuk mencegah double-press
+        let isSubmitting = false;
 
         // --- EFEK SUARA NATIVE (WEB AUDIO API) ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -549,7 +549,7 @@
                 };
             });
 
-            await db.ref(`rooms/${rR}/activeMatches`).remove();
+            await db.ref(`rooms/${rId}/activeMatches`).remove();
             await db.ref(`rooms/${rId}/completedResults`).remove();
             await db.ref(`rooms/${rId}/matches`).remove();
 
@@ -761,7 +761,6 @@
                             document.getElementById('countdown-box').classList.add('hidden');
                             document.getElementById('round-result').classList.add('hidden');
                         } else {
-                            // Reset tombol submit jika baru masuk ronde baru
                             isSubmitting = false;
                             const submitBtn = document.getElementById('submit-btn');
                             submitBtn.disabled = false;
@@ -804,7 +803,7 @@
         }
 
         window.submitWord = function() {
-            if (isSubmitting) return; // Mencegah double click / submit ganda
+            if (isSubmitting) return;
 
             const word = document.getElementById('word-input').value.trim().toUpperCase();
             const errEl = document.getElementById('error-msg');
