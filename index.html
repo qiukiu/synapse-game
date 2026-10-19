@@ -118,7 +118,7 @@
                 </div>
             </div>
 
-            <!-- Input Kata -->
+            <!-- Input Kata & Countdown -->
             <div id="active-player-box" class="space-y-3">
                 <div id="input-section" class="space-y-3">
                     <p id="input-instruction" class="text-xs text-slate-300 text-center">Ketik kata bebas untuk menentukan kata dasar ronde pertama!</p>
@@ -171,21 +171,30 @@
                     </div>
                 </div>
 
+                <!-- BANNER PERTANDINGAN SELESAI (WINNING MATCH) -->
+                <div id="match-won-banner" class="hidden bg-emerald-900/40 border border-emerald-500/50 p-4 rounded-xl text-center space-y-2">
+                    <div class="text-lg font-black text-emerald-400 uppercase tracking-wide">
+                        🎉 Match Won! Kata Sama: "<span id="winning-word-display" class="underline">---</span>"
+                    </div>
+                    <p class="text-xs text-slate-300">Pertandingan meja ini selesai. Menunggu meja lain menyelesaikan pertandingan...</p>
+                </div>
+
                 <!-- COOLDOWN & READY SYSTEM -->
                 <div id="next-round-btn-box" class="space-y-2">
                     <div id="cooldown-notice" class="hidden text-center py-2 text-xs text-slate-400 font-medium">
                         <span class="inline-block animate-pulse">⏳ Memproses hasil sync...</span>
                     </div>
-                    <button id="ready-next-btn" onclick="requestNextRound()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">Siap untuk Ronde / Pertandingan Berikutnya ➡️</button>
+                    <button id="ready-next-btn" onclick="requestNextRound()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">Siap untuk Ronde Berikutnya ➡️</button>
                     <p id="waiting-next-round" class="text-center text-xs text-slate-400 hidden">Menunggu pasangan Anda menekan tombol Siap...</p>
                 </div>
 
-                <div id="match-won-banner" class="hidden bg-emerald-900/40 border border-emerald-500/50 p-3 rounded-xl text-center text-xs text-emerald-300 font-bold">
-                    🎉 Kata Sama Ditemukan! Pertandingan ini selesai. Menunggu meja lain...
-                </div>
+                <!-- TOMBOL LIHAT HASIL AKHIR (JIKA SEMUA TAHAP SELESAI) -->
+                <button id="see-results-btn" onclick="showSummaryScreen()" class="hidden w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                    🏆 Lihat Hasil Akhir & Rangkuman
+                </button>
             </div>
 
-            <!-- LAYAR SELESAI PERMAINAN -->
+            <!-- LAYAR SELESAI PERMAINAN (SUMMARY SCREEN) -->
             <div id="tournament-complete" class="hidden space-y-4 pt-2 text-center">
                 <div class="bg-gradient-to-b from-indigo-950/90 to-slate-900 p-6 rounded-xl space-y-4 border border-emerald-500/50 shadow-xl">
                     <div class="text-4xl animate-bounce">🏆</div>
@@ -197,14 +206,19 @@
                             <span id="podium-fewest-rounds" class="text-sm font-bold text-white">---</span>
                         </div>
                         <div class="bg-slate-800/80 p-3 rounded-lg border border-emerald-500/40">
-                            <span class="text-xs text-indigo-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
+                            <span class="text-xs text-emerald-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
                             <span id="podium-ultimate-syncer" class="text-sm font-bold text-white">---</span>
                         </div>
                     </div>
                 </div>
                 <div class="space-y-2">
-                    <button id="rematch-btn" onclick="triggerRematch()" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">Main Lagi (Pemain Sama)</button>
-                    <button onclick="location.reload()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition">Kembali ke Menu Utama</button>
+                    <!-- Tombol Main Lagi untuk Setiap Pemain -->
+                    <button onclick="returnToLobby()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">
+                        🔄 Main Lagi di Ruang Ini
+                    </button>
+                    <button onclick="location.reload()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition">
+                        Kembali ke Menu Utama
+                    </button>
                 </div>
             </div>
         </div>
@@ -250,6 +264,7 @@
         let isTVMode = false;
         let isReady = false;
         let countdownTimer = null;
+        let activeCountdownRound = null;
         let currentForbiddenWords = [];
         let isSubmitting = false;
 
@@ -576,59 +591,59 @@
                     isHost = true;
                 }
 
-                document.getElementById('player-count').innerText = playersArr.length;
-                
-                document.getElementById('player-list').innerHTML = playersArr.map(([id, p]) => `
-                    <div class="bg-slate-800 p-2.5 rounded text-sm font-medium flex justify-between items-center">
-                        <span>${p.name} ${p.host ? '<span class="text-xs text-indigo-400 font-bold ml-1">(Host)</span>' : ''}</span> 
-                        <span class="text-xs px-2 py-0.5 rounded font-bold ${p.ready ? 'bg-emerald-900/60 text-emerald-400 border border-emerald-500/40' : 'bg-amber-900/40 text-amber-400 border border-emerald-500/30'}">
-                            ${p.ready ? 'SIAP ✓' : 'MENUNGGU...'}
-                        </span>
-                    </div>
-                `).join('');
+                if (room.status === 'lobby') {
+                    showScreen('screen-lobby');
+                    isReady = myPlayerData ? !!myPlayerData.ready : false;
 
-                if (isHost) {
-                    document.getElementById('host-controls').classList.remove('hidden');
-                    document.getElementById('non-host-controls').classList.add('hidden');
-                    document.getElementById('waiting-msg').classList.add('hidden');
-
-                    const nonHostsArr = playersArr.filter(([id, p]) => !p.host);
-                    const allNonHostsReady = nonHostsArr.length > 0 && nonHostsArr.every(([id, p]) => p.ready);
-                    
-                    const startBtn = document.getElementById('start-btn');
-                    if (playersArr.length < 2) {
-                        startBtn.disabled = true;
-                        startBtn.innerText = "Mulai Permainan (Butuh Min. 2 Pemain)";
-                    } else if (!allNonHostsReady) {
-                        startBtn.disabled = true;
-                        startBtn.innerText = "Mulai Permainan (Menunggu Pemain Siap)";
+                    const btn = document.getElementById('ready-btn');
+                    if (isReady) {
+                        btn.innerText = "Batal Siap (Status: SIAP ✓)";
+                        btn.className = "w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md";
                     } else {
-                        startBtn.disabled = false;
-                        startBtn.innerText = "Mulai Permainan 🔥";
+                        btn.innerText = "Tekan Jika Siap ✋";
+                        btn.className = "w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg transition shadow-md";
                     }
-                } else {
-                    document.getElementById('host-controls').classList.add('hidden');
-                    document.getElementById('non-host-controls').classList.remove('hidden');
-                    document.getElementById('waiting-msg').classList.remove('hidden');
+
+                    document.getElementById('player-count').innerText = playersArr.length;
+                    document.getElementById('player-list').innerHTML = playersArr.map(([id, p]) => `
+                        <div class="bg-slate-800 p-2.5 rounded text-sm font-medium flex justify-between items-center">
+                            <span>${p.name} ${p.host ? '<span class="text-xs text-indigo-400 font-bold ml-1">(Host)</span>' : ''}</span> 
+                            <span class="text-xs px-2 py-0.5 rounded font-bold ${p.ready ? 'bg-emerald-900/60 text-emerald-400 border border-emerald-500/40' : 'bg-amber-900/40 text-amber-400 border border-emerald-500/30'}">
+                                ${p.ready ? 'SIAP ✓' : 'MENUNGGU...'}
+                            </span>
+                        </div>
+                    `).join('');
+
+                    if (isHost) {
+                        document.getElementById('host-controls').classList.remove('hidden');
+                        document.getElementById('non-host-controls').classList.add('hidden');
+                        document.getElementById('waiting-msg').classList.add('hidden');
+
+                        const nonHostsArr = playersArr.filter(([id, p]) => !p.host);
+                        const allNonHostsReady = nonHostsArr.length > 0 && nonHostsArr.every(([id, p]) => p.ready);
+                        
+                        const startBtn = document.getElementById('start-btn');
+                        if (playersArr.length < 2) {
+                            startBtn.disabled = true;
+                            startBtn.innerText = "Mulai Permainan (Butuh Min. 2 Pemain)";
+                        } else if (!allNonHostsReady) {
+                            startBtn.disabled = true;
+                            startBtn.innerText = "Mulai Permainan (Menunggu Pemain Siap)";
+                        } else {
+                            startBtn.disabled = false;
+                            startBtn.innerText = "Mulai Permainan 🔥";
+                        }
+                    } else {
+                        document.getElementById('host-controls').classList.add('hidden');
+                        document.getElementById('non-host-controls').classList.remove('hidden');
+                        document.getElementById('waiting-msg').classList.remove('hidden');
+                    }
+                    return;
                 }
 
                 if (room.status === 'playing' || room.status === 'finished') {
                     showScreen('screen-game');
 
-                    if (room.status === 'finished') {
-                        document.getElementById('active-player-box').classList.add('hidden');
-                        document.getElementById('bye-player-box').classList.add('hidden');
-                        document.getElementById('round-result').classList.add('hidden');
-                        document.getElementById('tournament-complete').classList.remove('hidden');
-                        renderPodium(room);
-                        
-                        if (isHost) {
-                            document.getElementById('rematch-btn').classList.remove('hidden');
-                        }
-                        return;
-                    }
-
-                    document.getElementById('tournament-complete').classList.add('hidden');
                     const stageIdx = room.currentStageIndex || 0;
                     document.getElementById('stage-heading').innerText = `Tahap Permainan ${stageIdx + 1} dari ${room.stages ? room.stages.length : 1}`;
 
@@ -707,7 +722,6 @@
 
                                 if (!revealCard.classList.contains('reveal-anim')) {
                                     revealCard.classList.add('reveal-anim');
-                                    
                                     if (score === 100) {
                                         playSound('sync');
                                     } else {
@@ -737,9 +751,18 @@
 
                                 if (myMatch.status === 'completed') {
                                     document.getElementById('match-won-banner').classList.remove('hidden');
+                                    document.getElementById('winning-word-display').innerText = currentRoundData.inputs[myMatch.p1];
                                     document.getElementById('next-round-btn-box').classList.add('hidden');
+                                    
+                                    // Tampilkan tombol "Lihat Hasil Akhir" jika permainan telah selesai
+                                    if (room.status === 'finished') {
+                                        document.getElementById('see-results-btn').classList.remove('hidden');
+                                    } else {
+                                        document.getElementById('see-results-btn').classList.add('hidden');
+                                    }
                                 } else {
                                     document.getElementById('match-won-banner').classList.add('hidden');
+                                    document.getElementById('see-results-btn').classList.add('hidden');
                                     document.getElementById('next-round-btn-box').classList.remove('hidden');
                                     
                                     const readyNextBtn = document.getElementById('ready-next-btn');
@@ -761,6 +784,7 @@
                             document.getElementById('countdown-box').classList.add('hidden');
                             document.getElementById('round-result').classList.add('hidden');
                         } else {
+                            // Reset flag & tombol untuk ronde baru
                             isSubmitting = false;
                             const submitBtn = document.getElementById('submit-btn');
                             submitBtn.disabled = false;
@@ -783,16 +807,24 @@
         }
 
         function startCountdown(matchKey, roundNum) {
-            if (countdownTimer) return;
+            if (countdownTimer && activeCountdownRound === roundNum) return;
+            
+            // Clear timer lama jika berpindah ronde
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+            activeCountdownRound = roundNum;
+
             let count = 3;
             const cdEl = document.getElementById('countdown-num');
-            cdEl.innerText = count;
+            if (cdEl) cdEl.innerText = count;
             playSound('tick');
 
             countdownTimer = setInterval(() => {
                 count--;
                 if (count > 0) {
-                    cdEl.innerText = count;
+                    if (cdEl) cdEl.innerText = count;
                     playSound('tick');
                 } else {
                     clearInterval(countdownTimer);
@@ -874,7 +906,7 @@
             const raw1 = p1Input.trim().toLowerCase();
             const raw2 = p2Input.trim().toLowerCase();
 
-            // Ronde 1 sekarang ikut melalui alur reveal & countdown normal
+            // Evaluasi Ronde 1
             if (currentRound === 1 && !match.seed) {
                 await db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).update({
                     score: 50,
@@ -981,13 +1013,33 @@
             });
         }
 
-        window.triggerRematch = function() {
+        window.showSummaryScreen = function() {
             playSound('click');
+            document.getElementById('active-player-box').classList.add('hidden');
+            document.getElementById('bye-player-box').classList.add('hidden');
+            document.getElementById('round-result').classList.add('hidden');
+            document.getElementById('tournament-complete').classList.remove('hidden');
+            
             db.ref('rooms/' + roomId).once('value').then(snap => {
-                const room = snap.val();
-                const pIds = Object.keys(room.players || {});
-                const stages = generateParallelStages(pIds);
-                initializeStageMatches(roomId, stages, 0);
+                renderPodium(snap.val() || {});
+            });
+        };
+
+        window.returnToLobby = function() {
+            playSound('click');
+            db.ref(`rooms/${roomId}`).update({
+                status: 'lobby',
+                currentStageIndex: 0
+            }).then(() => {
+                // Reset status ready semua pemain di database
+                db.ref(`rooms/${roomId}/players`).once('value').then(snap => {
+                    const players = snap.val() || {};
+                    const updates = {};
+                    Object.keys(players).forEach(pId => {
+                        updates[`rooms/${roomId}/players/${pId}/ready`] = players[pId].host ? true : false;
+                    });
+                    db.ref().update(updates);
+                });
             });
         };
 
