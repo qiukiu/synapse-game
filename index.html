@@ -197,7 +197,7 @@
                             <span id="podium-fewest-rounds" class="text-sm font-bold text-white">---</span>
                         </div>
                         <div class="bg-slate-800/80 p-3 rounded-lg border border-emerald-500/40">
-                            <span class="text-xs text-emerald-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
+                            <span class="text-xs text-indigo-300 block font-bold uppercase">🌟 Pembaca Pikiran Sejati (Total Ronde Terkecil)</span>
                             <span id="podium-ultimate-syncer" class="text-sm font-bold text-white">---</span>
                         </div>
                     </div>
@@ -874,20 +874,11 @@
             const raw1 = p1Input.trim().toLowerCase();
             const raw2 = p2Input.trim().toLowerCase();
 
+            // Ronde 1 sekarang ikut melalui alur reveal & countdown normal
             if (currentRound === 1 && !match.seed) {
-                const generatedSeed = `${p1Input.toUpperCase()} + ${p2Input.toUpperCase()}`;
-                const updatedUsed = [...(match.usedSeeds || []), p1Input.toUpperCase(), p2Input.toUpperCase()];
-
                 await db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${currentRound}`).update({
                     score: 50,
                     completed: true
-                });
-
-                await db.ref(`rooms/${roomId}/activeMatches/${matchKey}`).update({
-                    round: 2,
-                    seed: generatedSeed,
-                    usedSeeds: updatedUsed,
-                    history: `Kata Dasar dari Ronde 1`
                 });
                 isEvaluating = false;
                 return;
