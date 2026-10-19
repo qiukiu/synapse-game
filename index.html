@@ -12,9 +12,24 @@
     <style>
         body { background: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .temp-bar { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes pulse-glow { 0%, 100% { filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.5)); } 50% { filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.9)); } }
+        .temp-bar { transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes pulse-glow { 0%, 100% { filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.5)); } 50% { filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.9)); } }
         .glow { animation: pulse-glow 1.5s infinite; }
+        
+        /* Dramatic reveal animations */
+        @keyframes dramatic-pop {
+            0% { transform: scale(0.3); opacity: 0; filter: blur(10px); }
+            50% { transform: scale(1.15); filter: blur(0px); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .reveal-anim { animation: dramatic-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes countdown-pulse {
+            0% { transform: scale(1.5); opacity: 0.2; }
+            50% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0; }
+        }
+        .cd-anim { animation: countdown-pulse 0.9s infinite; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
@@ -109,9 +124,16 @@
                     <p id="error-msg" class="text-xs text-red-400 text-center hidden font-medium"></p>
                     <button onclick="submitWord()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-md">Kirim Jawaban</button>
                 </div>
+
                 <div id="waiting-submission" class="hidden text-center py-4">
                     <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-500 border-t-transparent mb-2"></div>
                     <p class="text-xs text-slate-400">Jawaban dikirim! Menunggu lawan memasukkan kata...</p>
+                </div>
+
+                <!-- COUNTDOWN SCREEN PRIOR TO DRAMATIC REVEAL -->
+                <div id="countdown-box" class="hidden text-center py-6 space-y-2">
+                    <p class="text-xs text-indigo-300 uppercase tracking-widest font-bold">Membuka Jawaban Dalam...</p>
+                    <div id="countdown-num" class="text-6xl font-black text-amber-400 cd-anim">3</div>
                 </div>
             </div>
 
@@ -120,37 +142,40 @@
                 <p class="text-xs text-slate-400 mt-1">Pemain lain sedang bermain di tahap ini...</p>
             </div>
 
-            <!-- Tampilan Hasil Ronde -->
+            <!-- Tampilan Hasil Ronde (DRAMATIC REVEAL) -->
             <div id="round-result" class="hidden space-y-4 pt-2">
-                <div class="bg-slate-800/90 p-4 rounded-xl space-y-3 text-center border border-slate-700">
+                <div id="reveal-card" class="bg-slate-800/90 p-4 rounded-xl space-y-4 text-center border border-slate-700">
                     <div class="grid grid-cols-2 gap-2 text-sm">
-                        <div class="bg-slate-900/50 p-2 rounded">
-                            <span id="res-p1-label" class="text-xs text-slate-400 block">P1</span>
-                            <span id="res-p1-val" class="font-bold text-white uppercase"></span>
+                        <div class="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/30">
+                            <span id="res-p1-label" class="text-xs text-slate-400 block mb-1">P1</span>
+                            <span id="res-p1-val" class="text-lg font-black text-cyan-300 uppercase tracking-wide block"></span>
                         </div>
-                        <div class="bg-slate-900/50 p-2 rounded">
-                            <span id="res-p2-label" class="text-xs text-slate-400 block">P2</span>
-                            <span id="res-p2-val" class="font-bold text-white uppercase"></span>
+                        <div class="bg-slate-900/80 p-3 rounded-xl border border-amber-500/30">
+                            <span id="res-p2-label" class="text-xs text-slate-400 block mb-1">P2</span>
+                            <span id="res-p2-val" class="text-lg font-black text-amber-300 uppercase tracking-wide block"></span>
                         </div>
                     </div>
 
                     <!-- Indikator Suhu / Sync -->
-                    <div class="space-y-1">
+                    <div class="space-y-1.5 pt-2 border-t border-slate-700/60">
                         <div class="flex justify-between text-xs">
-                            <span class="text-slate-400">Tingkat Sync</span>
-                            <span id="temp-val" class="font-bold text-amber-400">0°</span>
+                            <span class="text-slate-400 uppercase tracking-wider">Tingkat Sync</span>
+                            <span id="temp-val" class="font-black text-amber-400 text-sm">0°</span>
                         </div>
-                        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden">
-                            <div id="temp-bar" class="temp-bar h-full bg-gradient-to-r from-blue-500 via-amber-500 to-red-500 w-0"></div>
+                        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                            <div id="temp-bar" class="temp-bar h-full bg-gradient-to-r from-blue-500 via-amber-500 to-red-500 rounded-full w-0"></div>
                         </div>
-                        <span id="temp-rating" class="text-xs font-semibold text-slate-300 block pt-1">---</span>
+                        <span id="temp-rating" class="text-xs font-bold text-slate-200 block pt-1">---</span>
                     </div>
                 </div>
 
-                <!-- Tombol Lanjut Ronde Berikutnya -->
+                <!-- COOLDOWN & READY SYSTEM -->
                 <div id="next-round-btn-box" class="space-y-2">
-                    <button onclick="requestNextRound()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">Lanjut ke Ronde Berikutnya ➡️</button>
-                    <p id="waiting-next-round" class="text-center text-xs text-slate-400 hidden">Menunggu pasangan Anda menekan tombol lanjut...</p>
+                    <div id="cooldown-notice" class="hidden text-center py-2 text-xs text-slate-400 font-medium">
+                        <span class="inline-block animate-pulse">⏳ Memproses hasil sync...</span>
+                    </div>
+                    <button id="ready-next-btn" onclick="requestNextRound()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-md">Siap untuk Ronde / Pertandingan Berikutnya ➡️</button>
+                    <p id="waiting-next-round" class="text-center text-xs text-slate-400 hidden">Menunggu pasangan Anda menekan tombol Siap...</p>
                 </div>
 
                 <div id="match-won-banner" class="hidden bg-emerald-900/40 border border-emerald-500/50 p-3 rounded-xl text-center text-xs text-emerald-300 font-bold">
@@ -183,7 +208,7 @@
         </div>
     </div>
 
-    <!-- TAMPILAN KHUSUS TV DISPLAY (HIDDEN BY DEFAULT) -->
+    <!-- TAMPILAN KHUSUS TV DISPLAY -->
     <div id="screen-tv" class="hidden w-full max-w-6xl space-y-6">
         <div class="flex justify-between items-center bg-slate-800/80 p-6 rounded-2xl border border-indigo-500/30 shadow-2xl">
             <div>
@@ -236,6 +261,7 @@
         let isEvaluating = false;
         let isTVMode = false;
         let isReady = false;
+        let countdownTimer = null;
         let currentForbiddenWords = [];
 
         // --- EFEK SUARA NATIVE (WEB AUDIO API) ---
@@ -262,15 +288,30 @@
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
                 osc.start(now);
                 osc.stop(now + 0.15);
+            } else if (type === 'tick') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } else if (type === 'reveal') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.4);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
             } else if (type === 'sync') {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(523.25, now);
                 osc.frequency.setValueAtTime(659.25, now + 0.1);
                 osc.frequency.setValueAtTime(783.99, now + 0.2);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
                 osc.start(now);
-                osc.stop(now + 0.5);
+                osc.stop(now + 0.6);
             }
         }
 
@@ -616,7 +657,7 @@
 
                     if (!myMatch) {
                         document.getElementById('active-player-box').classList.add('hidden');
-                        document.getElementById('bye-player-box').classList.remove('hidden');
+                        document.getElementById('bye-player-box').classList.add('hidden');
                         document.getElementById('round-result').classList.add('hidden');
                     } else {
                         document.getElementById('active-player-box').classList.remove('hidden');
@@ -659,61 +700,79 @@
                             evaluateMatchRound(myMatchKey, myMatch);
                         }
 
+                        // COUNTDOWN & DRAMATIC REVEAL LOGIC
                         if (currentRoundData && currentRoundData.completed) {
                             document.getElementById('input-section').classList.add('hidden');
                             document.getElementById('waiting-submission').classList.add('hidden');
-                            document.getElementById('round-result').classList.remove('hidden');
-
-                            document.getElementById('res-p1-label').innerText = p1Name;
-                            document.getElementById('res-p1-val').innerText = currentRoundData.inputs[myMatch.p1];
-                            document.getElementById('res-p2-label').innerText = p2Name;
-                            document.getElementById('res-p2-val').innerText = currentRoundData.inputs[myMatch.p2];
-
-                            const score = currentRoundData.score;
-                            document.getElementById('temp-val').innerText = score + '°';
-                            const tempBar = document.getElementById('temp-bar');
-                            tempBar.style.width = score + '%';
-                            if (score >= 80) {
-                                tempBar.classList.add('glow');
+                            
+                            // Check if countdown trigger has been executed
+                            if (!currentRoundData.revealed) {
+                                document.getElementById('countdown-box').classList.remove('hidden');
+                                document.getElementById('round-result').classList.add('hidden');
+                                startCountdown(myMatchKey, myMatch.round);
                             } else {
-                                tempBar.classList.remove('glow');
-                            }
+                                document.getElementById('countdown-box').classList.add('hidden');
+                                document.getElementById('round-result').classList.remove('hidden');
 
-                            document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match! Sempurna!' : score > 50 ? '⚡ Hangat & Berasosiasi!' : '❄️ Koneksi Masih Dingin';
+                                const revealCard = document.getElementById('reveal-card');
+                                if (!revealCard.classList.contains('reveal-anim')) {
+                                    revealCard.classList.add('reveal-anim');
+                                    playSound('reveal');
+                                }
 
-                            const nextVotes = currentRoundData.nextVotes || {};
-                            const myVote = nextVotes[playerId];
-                            const votesCount = Object.keys(nextVotes).length;
+                                document.getElementById('res-p1-label').innerText = p1Name;
+                                document.getElementById('res-p1-val').innerText = currentRoundData.inputs[myMatch.p1];
+                                document.getElementById('res-p2-label').innerText = p2Name;
+                                document.getElementById('res-p2-val').innerText = currentRoundData.inputs[myMatch.p2];
 
-                            if (myMatch.status === 'completed') {
-                                document.getElementById('match-won-banner').classList.remove('hidden');
-                                document.getElementById('next-round-btn-box').classList.add('hidden');
-                            } else {
-                                document.getElementById('match-won-banner').classList.add('hidden');
-                                document.getElementById('next-round-btn-box').classList.remove('hidden');
-                                
-                                const nextBtn = document.querySelector('#next-round-btn-box button');
-                                const waitingText = document.getElementById('waiting-next-round');
-
-                                if (myVote) {
-                                    nextBtn.classList.add('hidden');
-                                    waitingText.classList.remove('hidden');
-                                    waitingText.innerText = `Menunggu pasangan Anda menekan tombol lanjut... (${votesCount}/2 siap)`;
+                                const score = currentRoundData.score;
+                                document.getElementById('temp-val').innerText = score + '°';
+                                const tempBar = document.getElementById('temp-bar');
+                                tempBar.style.width = score + '%';
+                                if (score >= 80) {
+                                    tempBar.classList.add('glow');
                                 } else {
-                                    nextBtn.classList.remove('hidden');
-                                    nextBtn.innerText = "Lanjut ke Ronde Berikutnya ➡️";
-                                    waitingText.classList.add('hidden');
+                                    tempBar.classList.remove('glow');
+                                }
+
+                                document.getElementById('temp-rating').innerText = score === 100 ? '🔥 Exact Match! Sempurna!' : score > 50 ? '⚡ Hangat & Berasosiasi!' : '❄️ Koneksi Masih Dingin';
+
+                                const nextVotes = currentRoundData.nextVotes || {};
+                                const myVote = nextVotes[playerId];
+                                const votesCount = Object.keys(nextVotes).length;
+
+                                if (myMatch.status === 'completed') {
+                                    document.getElementById('match-won-banner').classList.remove('hidden');
+                                    document.getElementById('next-round-btn-box').classList.add('hidden');
+                                } else {
+                                    document.getElementById('match-won-banner').classList.add('hidden');
+                                    document.getElementById('next-round-btn-box').classList.remove('hidden');
+                                    
+                                    const readyNextBtn = document.getElementById('ready-next-btn');
+                                    const waitingText = document.getElementById('waiting-next-round');
+
+                                    if (myVote) {
+                                        readyNextBtn.classList.add('hidden');
+                                        waitingText.classList.remove('hidden');
+                                        waitingText.innerText = `Menunggu pasangan Anda menekan tombol Siap... (${votesCount}/2 siap)`;
+                                    } else {
+                                        readyNextBtn.classList.remove('hidden');
+                                        waitingText.classList.add('hidden');
+                                    }
                                 }
                             }
                         } else if (mySubmission) {
                             document.getElementById('input-section').classList.add('hidden');
                             document.getElementById('waiting-submission').classList.remove('hidden');
+                            document.getElementById('countdown-box').classList.add('hidden');
                             document.getElementById('round-result').classList.add('hidden');
                         } else {
                             document.getElementById('input-section').classList.remove('hidden');
                             document.getElementById('waiting-submission').classList.add('hidden');
+                            document.getElementById('countdown-box').classList.add('hidden');
                             document.getElementById('round-result').classList.add('hidden');
                             document.getElementById('error-msg').classList.add('hidden');
+                            document.getElementById('reveal-card').classList.remove('reveal-anim');
                         }
                     }
 
@@ -722,6 +781,26 @@
                     }
                 }
             });
+        }
+
+        function startCountdown(matchKey, roundNum) {
+            if (countdownTimer) return;
+            let count = 3;
+            const cdEl = document.getElementById('countdown-num');
+            cdEl.innerText = count;
+            playSound('tick');
+
+            countdownTimer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    cdEl.innerText = count;
+                    playSound('tick');
+                } else {
+                    clearInterval(countdownTimer);
+                    countdownTimer = null;
+                    db.ref(`rooms/${roomId}/activeMatches/${matchKey}/rounds/${roundNum}`).update({ revealed: true });
+                }
+            }, 900);
         }
 
         window.submitWord = function() {
@@ -849,31 +928,43 @@
 
         window.requestNextRound = function() {
             playSound('click');
-            db.ref('rooms/' + roomId).once('value').then(snap => {
-                const room = snap.val();
-                const activeMatches = room.activeMatches || {};
-                let myMatchKey = null;
-                for (const [key, match] of Object.entries(activeMatches)) {
-                    if (match.p1 === playerId || match.p2 === playerId) {
-                        myMatchKey = key;
-                        break;
-                    }
-                }
+            const notice = document.getElementById('cooldown-notice');
+            const readyBtn = document.getElementById('ready-next-btn');
+            
+            readyBtn.disabled = true;
+            notice.classList.remove('hidden');
 
-                if (myMatchKey) {
-                    const match = activeMatches[myMatchKey];
-                    const currentRound = match.round;
-                    
-                    db.ref(`rooms/${roomId}/activeMatches/${myMatchKey}/rounds/${currentRound}/nextVotes/${playerId}`).set(true).then(() => {
-                        db.ref(`rooms/${roomId}/activeMatches/${myMatchKey}/rounds/${currentRound}/nextVotes`).once('value').then(voteSnap => {
-                            const votes = voteSnap.val() || {};
-                            if (Object.keys(votes).length >= 2) {
-                                executeNextRound(myMatchKey, match);
-                            }
+            // Cooldown delay before casting ready state
+            setTimeout(() => {
+                readyBtn.disabled = false;
+                notice.classList.add('hidden');
+
+                db.ref('rooms/' + roomId).once('value').then(snap => {
+                    const room = snap.val();
+                    const activeMatches = room.activeMatches || {};
+                    let myMatchKey = null;
+                    for (const [key, match] of Object.entries(activeMatches)) {
+                        if (match.p1 === playerId || match.p2 === playerId) {
+                            myMatchKey = key;
+                            break;
+                        }
+                    }
+
+                    if (myMatchKey) {
+                        const match = activeMatches[myMatchKey];
+                        const currentRound = match.round;
+                        
+                        db.ref(`rooms/${roomId}/activeMatches/${myMatchKey}/rounds/${currentRound}/nextVotes/${playerId}`).set(true).then(() => {
+                            db.ref(`rooms/${roomId}/activeMatches/${myMatchKey}/rounds/${currentRound}/nextVotes`).once('value').then(voteSnap => {
+                                const votes = voteSnap.val() || {};
+                                if (Object.keys(votes).length >= 2) {
+                                    executeNextRound(myMatchKey, match);
+                                }
+                            });
                         });
-                    });
-                }
-            });
+                    }
+                });
+            }, 600);
         };
 
         function executeNextRound(matchKey, match) {
