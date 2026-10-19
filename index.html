@@ -61,18 +61,18 @@
             </div>
             
             <div>
-                <h3 class="text-sm font-medium text-slate-300 mb-2">Pemain Terhubung</h3>
+                <h3 class="text-sm font-medium text-slate-300 mb-2">Pemain Terhubung (<span id="player-count">1</span>)</h3>
                 <div id="player-list" class="space-y-2"></div>
             </div>
 
-            <!-- TOMBOL SIAP (HANYA UNTUK NON-HOST) -->
+            <!-- TOMBOL SIAP (HANYA UNTUK PEMAIN NON-HOST) -->
             <div id="non-host-controls">
                 <button id="ready-btn" onclick="toggleReady()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg transition shadow-md">Tekan Jika Siap ✋</button>
             </div>
 
             <!-- KONTROL KHUSUS HOST -->
             <div id="host-controls" class="hidden pt-2 border-t border-slate-700">
-                <button id="start-btn" onclick="startParallelTournament()" disabled class="w-full bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg">Mulai Permainan (Menunggu Pemain Siap)</button>
+                <button id="start-btn" onclick="startParallelTournament()" disabled class="w-full bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg">Mulai Permainan</button>
             </div>
             
             <p id="waiting-msg" class="text-xs text-slate-400">Menunggu Host memulai permainan...</p>
@@ -498,7 +498,6 @@
                 
                 if (pIds.length < 2) return alert('Dibutuhkan minimal 2 pemain!');
 
-                // Validasi bahwa semua pemain non-host sudah SIAP
                 const nonHostReady = Object.values(players).filter(p => !p.host).every(p => p.ready);
                 if (!nonHostReady) return alert('Semua pemain harus menekan tombol Siap terlebih dahulu!');
 
@@ -543,14 +542,12 @@
                 const playersArr = Object.entries(playersObj);
                 const myPlayerData = playersObj[playerId];
                 
-                // Set status Host berdasarkan database
                 if (myPlayerData && myPlayerData.host) {
                     isHost = true;
                 }
 
                 document.getElementById('player-count').innerText = playersArr.length;
                 
-                // Render daftar pemain lobi
                 document.getElementById('player-list').innerHTML = playersArr.map(([id, p]) => `
                     <div class="bg-slate-800 p-2.5 rounded text-sm font-medium flex justify-between items-center">
                         <span>${p.name} ${p.host ? '<span class="text-xs text-indigo-400 font-bold ml-1">(Host)</span>' : ''}</span> 
@@ -560,7 +557,6 @@
                     </div>
                 `).join('');
 
-                // Tampilan Kontrol Lobi
                 if (isHost) {
                     document.getElementById('host-controls').classList.remove('hidden');
                     document.getElementById('non-host-controls').classList.add('hidden');
@@ -620,7 +616,7 @@
 
                     if (!myMatch) {
                         document.getElementById('active-player-box').classList.add('hidden');
-                        document.getElementById('bye-player-box').classList.add('hidden');
+                        document.getElementById('bye-player-box').classList.remove('hidden');
                         document.getElementById('round-result').classList.add('hidden');
                     } else {
                         document.getElementById('active-player-box').classList.remove('hidden');
